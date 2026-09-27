@@ -69,6 +69,8 @@ class GameView(context: Context) : View(context) {
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
     private val pixels = Paint().apply { isFilterBitmap = false }
+    private val versionName: String =
+        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
     private val thumbnails: List<Bitmap> = Levels.ARTS.map { art ->
         Bitmap.createBitmap(art.width, art.height, Bitmap.Config.ARGB_8888).apply {
             for (y in 0 until art.height) for (x in 0 until art.width) {
@@ -317,6 +319,12 @@ class GameView(context: Context) : View(context) {
         text.textSize = 7 * u
         if (menuPage > 0) drawButton(canvas, previousPage, "‹", PANEL, INK)
         if (menuPage < (reached - 1) / LEVELS_PER_PAGE) drawButton(canvas, nextPage, "›", PANEL, INK)
+
+        text.color = INK_SOFT
+        text.textSize = 3.2f * u
+        canvas.drawText("Created with AI", width / 2f, height - 5 * u, text)
+        text.textSize = 2.4f * u
+        canvas.drawText("v$versionName", width / 2f, height - 2 * u, text)
     }
 
     private fun drawLock(canvas: Canvas, cx: Float, cy: Float, size: Float) {
