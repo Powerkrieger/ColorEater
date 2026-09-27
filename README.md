@@ -9,6 +9,11 @@ picture before every slot is blocked.
 - 9 pixel-art pictures; Easy / Normal / Hard; levels are winnable by construction and tuned to
   be tight (a solver decides how many slots a level gets).
 
+## Download
+
+Get `coloreater.apk` from the [latest release](https://github.com/Powerkrieger/ColorEater/releases/latest)
+and open it on an Android phone (you may have to allow installing unknown apps). Requires Android 16.
+
 ## Build and run
 
 ```sh
@@ -21,6 +26,20 @@ After changing the level generator or level settings, regenerate the shipped lev
 ```sh
 WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
 ```
+
+## Releases
+
+GitHub Actions (`.github/workflows/build.yml`) runs the unit tests and builds a signed release
+APK on every push to `main`. Pushing a tag `v*` also publishes a GitHub release with the APK:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+Signing uses the repo secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS` and
+`KEY_PASSWORD`. Locally the keystore is `coloreater-release.jks` with its passwords in
+`coloreater-release.env`; both are gitignored. Keep a backup: without the keystore, installed
+copies can't be updated.
 
 ## Layout
 
