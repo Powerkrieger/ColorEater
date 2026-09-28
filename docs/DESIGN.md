@@ -76,6 +76,16 @@ carries it back.
 - **Drawing**: the ant is top-down, with three body parts, six legs in an alternating tripod gait
   and antennae. Paths bend slightly (out on one side, back on the other). No image files are needed.
 
+### Title screen (`ui/FlowerIntro.kt`)
+
+The app opens on a title screen with a large pixel flower and one button per difficulty (showing
+the level reached); a button opens that difficulty's level list, Back returns to the title.
+
+The flower grows out of a soil mound: pixels appear outwards from the soil (breadth-first,
+shuffled within each step). Once it has bloomed for a moment, an `AntSwarm` whose nest sits just
+off the screen edge, in a random direction for every flower, carries away everything but the
+soil, in reverse growth order. Then the next of 5 flowers grows, in random order and never the same one twice in a row.
+
 ## 4. Level generation (`game/LevelGenerator.kt`)
 
 Goals: every level must be **winnable**, and it should **work close**, with no easy way through.

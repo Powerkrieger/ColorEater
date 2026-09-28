@@ -23,6 +23,8 @@ import de.powerizzle.coloreater.game.PixelArt
 import de.powerizzle.coloreater.game.Status
 import java.io.IOException
 import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.min
@@ -30,7 +32,7 @@ import kotlin.math.sin
 
 /** Draws and runs the whole game: level menu, board and result overlay. */
 class GameView(context: Context) : View(context) {
-    private enum class Screen { MENU, LOADING, PLAYING }
+    private enum class Screen { TITLE, MENU, LOADING, PLAYING }
 
     private val progress = context.getSharedPreferences("progress", Context.MODE_PRIVATE)
     private var difficulty: Difficulty =
@@ -42,19 +44,21 @@ class GameView(context: Context) : View(context) {
 
     /** Highest level that may be played; everything below it is completed. Kept per difficulty. */
     private var unlocked: Int
-        get() = progress.getInt(
-            KEY_UNLOCKED + difficulty.name,
-            // Progress from before difficulties existed counts as Normal.
-            if (difficulty == Difficulty.NORMAL) progress.getInt(KEY_UNLOCKED_OLD, 1) else 1,
-        )
+        get() = unlocked(difficulty)
         set(value) = progress.edit { putInt(KEY_UNLOCKED + difficulty.name, value) }
+
+    private fun unlocked(difficulty: Difficulty) = progress.getInt(
+        KEY_UNLOCKED + difficulty.name,
+        // Progress from before difficulties existed counts as Normal.
+        if (difficulty == Difficulty.NORMAL) progress.getInt(KEY_UNLOCKED_OLD, 1) else 1,
+    )
 
     // Levels are generated in the background; the next level is prepared while playing.
     private val generator = Executors.newSingleThreadExecutor()
     private val prepared = HashMap<Pair<Difficulty, Int>, Level>()
     private val preparing = HashSet<Pair<Difficulty, Int>>()
 
-    private var screen = Screen.MENU
+    private var screen = Screen.TITLE
     private var loadingNumber = 0
     private var session: Session? = null
     private var menuPage = (unlocked - 1) / LEVELS_PER_PAGE
@@ -84,7 +88,10 @@ class GameView(context: Context) : View(context) {
 
     /** Layout unit: 1% of the view width. */
     private var u = 1f
+    private val flowerRect = RectF()
+    private val flower = FlowerIntro()
     private val menuButton = RectF()
+    private val backButton = RectF()
     private val restartButton = RectF()
     private val pictureRect = RectF()
     private var cell = 1f
@@ -97,6 +104,26 @@ class GameView(context: Context) : View(context) {
     private val previousPage = RectF()
     private val nextPage = RectF()
     private val scratch = RectF()
+
+    /** The title flower's ants live just off the screen edge, in the direction the flower picked. */
+    private val flowerGeometry = object : AntSwarm.Geometry {
+        private val cell get() = flowerRect.width() / FlowerIntro.SIZE
+        override fun pixelX(pixel: Int) = flowerRect.left + (pixel % FlowerIntro.SIZE + 0.5f) * cell
+        override fun pixelY(pixel: Int) = flowerRect.top + (pixel / FlowerIntro.SIZE + 0.5f) * cell
+        override fun nestX(slot: Int) = flowerRect.centerX() + cos(flower.antDirection).toFloat() * nestDistance()
+        override fun nestY(slot: Int) = flowerRect.centerY() + sin(flower.antDirection).toFloat() * nestDistance()
+        override val antSpeed get() = 70 * u
+        override val nestWidth get() = 10 * u
+
+        /** From the flower's center to a bit beyond the screen edge. */
+        private fun nestDistance(): Float {
+            val dx = cos(flower.antDirection)
+            val dy = sin(flower.antDirection)
+            val toX = if (dx > 0) width - flowerRect.centerX() else flowerRect.centerX()
+            val toY = if (dy > 0) height - flowerRect.centerY() else flowerRect.centerY()
+            return min(toX / max(abs(dx), 1e-6), toY / max(abs(dy), 1e-6)).toFloat() + 5 * u
+        }
+    }
 
     private val geometry = object : AntSwarm.Geometry {
         private val picture get() = session!!.level.picture
@@ -162,9 +189,17 @@ class GameView(context: Context) : View(context) {
 
     /** Returns false if the back press should close the app. */
     fun onBackPressed(): Boolean {
-        if (screen == Screen.MENU) return false
-        showMenu()
+        when (screen) {
+            Screen.TITLE -> return false
+            Screen.MENU -> showTitle()
+            else -> showMenu()
+        }
         return true
+    }
+
+    private fun showTitle() {
+        screen = Screen.TITLE
+        invalidate()
     }
 
     private fun showMenu() {
@@ -180,6 +215,7 @@ class GameView(context: Context) : View(context) {
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         u = w / 100f
+        layoutTitle()
         layoutMenu()
         layoutBoard()
     }
@@ -189,20 +225,31 @@ class GameView(context: Context) : View(context) {
         3 * u,
     )
 
-    private fun layoutMenu() {
-        val choiceTop = height * 0.1f + 13 * u
-        val choiceWidth = (width - 8 * u - 2 * 2 * u) / 3
+    /** Title, a big flower, and one button per difficulty below it. */
+    private fun layoutTitle() {
+        val buttonHeight = 15 * u
+        val gap = 4 * u
+        val buttonsTop = height - 14 * u - 3 * buttonHeight - 2 * gap
         for ((i, choice) in difficultyButtons.withIndex()) {
-            val left = 4 * u + i * (choiceWidth + 2 * u)
-            choice.second.set(left, choiceTop, left + choiceWidth, choiceTop + 10 * u)
+            val top = buttonsTop + i * (buttonHeight + gap)
+            choice.second.set(16 * u, top, width - 16 * u, top + buttonHeight)
         }
+        val areaTop = safeTop() + 30 * u
+        val areaBottom = buttonsTop - 6 * u
+        val flowerSize = min(width - 12 * u, areaBottom - areaTop)
+        val flowerTop = (areaTop + areaBottom - flowerSize) / 2
+        flowerRect.set((width - flowerSize) / 2, flowerTop, (width + flowerSize) / 2, flowerTop + flowerSize)
+    }
 
+    private fun layoutMenu() {
+        val header = safeTop()
+        backButton.set(4 * u, header, 16 * u, header + 12 * u)
         levelButtons.clear()
         val columns = 4
         val gap = 3 * u
         val buttonWidth = (width - 8 * u - gap * (columns - 1)) / columns
         val buttonHeight = buttonWidth * 1.2f
-        val top = choiceTop + 16 * u
+        val top = header + 18 * u
         // Only a couple of locked levels are teased; the rest of the page stays empty.
         val lastShown = unlocked + LOCKED_SHOWN
         for (i in 0 until LEVELS_PER_PAGE) {
@@ -261,25 +308,59 @@ class GameView(context: Context) : View(context) {
     override fun onDraw(canvas: Canvas) {
         canvas.drawColor(BACKGROUND)
         when (screen) {
+            Screen.TITLE -> drawTitle(canvas)
             Screen.MENU -> drawMenu(canvas)
             Screen.LOADING -> drawLoading(canvas)
             Screen.PLAYING -> drawBoard(canvas, session!!)
         }
     }
 
-    private fun drawMenu(canvas: Canvas) {
-        text.color = INK
-        text.textSize = 11 * u
-        canvas.drawText("Color Eater", width / 2f, height * 0.1f, text)
-        text.textSize = 4 * u
-        text.color = INK_SOFT
-        canvas.drawText("Send the ants, clear the picture", width / 2f, height * 0.1f + 7 * u, text)
+    private fun drawTitle(canvas: Canvas) {
+        val now = now()
+        flower.update(now, flowerGeometry)
 
-        text.textSize = 4.5f * u
+        text.color = INK
+        fitText("Color Eater", 14 * u, width - 8 * u)
+        canvas.drawText("Color Eater", width / 2f, safeTop() + 17 * u, text)
+        text.color = INK_SOFT
+        fitText("Send the ants, clear the picture", 4.5f * u, width - 8 * u)
+        canvas.drawText("Send the ants, clear the picture", width / 2f, safeTop() + 25 * u, text)
+
         for ((choice, rect) in difficultyButtons) {
-            val selected = choice == difficulty
-            drawButton(canvas, rect, choice.label, if (selected) INK else PANEL, if (selected) Color.WHITE else INK)
+            val main = choice == difficulty
+            fill.color = if (main) INK else PANEL
+            canvas.drawRoundRect(rect, 4 * u, 4 * u, fill)
+            text.color = if (main) Color.WHITE else INK
+            text.textSize = 6 * u
+            canvas.drawText(choice.label, rect.centerX(), rect.centerY() + 0.5f * u, text)
+            text.color = if (main) PANEL else INK_SOFT
+            text.textSize = 3.4f * u
+            canvas.drawText("Level ${unlocked(choice)}", rect.centerX(), rect.centerY() + 5 * u, text)
         }
+
+        text.color = INK_SOFT
+        text.textSize = 3.2f * u
+        canvas.drawText("Created with AI", width / 2f, height - 5 * u, text)
+        text.textSize = 2.4f * u
+        canvas.drawText("v$versionName", width / 2f, height - 2 * u, text)
+
+        // Last, so ants walk over everything.
+        val cell = flowerRect.width() / FlowerIntro.SIZE
+        flower.draw(canvas, flowerRect, now, (cell * 1.8f).coerceIn(3.5f * u, 7f * u), min(cell, 3f * u))
+        postInvalidateOnAnimation()
+    }
+
+    private fun fitText(label: String, size: Float, maxWidth: Float) {
+        text.textSize = size
+        val width = text.measureText(label)
+        if (width > maxWidth) text.textSize = size * maxWidth / width
+    }
+
+    private fun drawMenu(canvas: Canvas) {
+        drawBackIcon(canvas, backButton)
+        text.color = INK
+        text.textSize = 6.5f * u
+        canvas.drawText(difficulty.label, width / 2f, centerTextY(backButton.centerY()), text)
 
         val reached = unlocked
         for ((number, rect) in levelButtons) {
@@ -322,11 +403,6 @@ class GameView(context: Context) : View(context) {
         if (menuPage > 0) drawButton(canvas, previousPage, "‹", PANEL, INK)
         if (menuPage < (reached - 1) / LEVELS_PER_PAGE) drawButton(canvas, nextPage, "›", PANEL, INK)
 
-        text.color = INK_SOFT
-        text.textSize = 3.2f * u
-        canvas.drawText("Created with AI", width / 2f, height - 5 * u, text)
-        text.textSize = 2.4f * u
-        canvas.drawText("v$versionName", width / 2f, height - 2 * u, text)
     }
 
     private fun drawLock(canvas: Canvas, cx: Float, cy: Float, size: Float) {
@@ -502,6 +578,17 @@ class GameView(context: Context) : View(context) {
         canvas.drawText(label, rect.centerX(), centerTextY(rect.centerY()), text)
     }
 
+    private fun drawBackIcon(canvas: Canvas, rect: RectF) {
+        fill.color = PANEL
+        canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
+        stroke.color = INK
+        stroke.strokeWidth = 1f * u
+        val cx = rect.centerX() + 0.8f * u
+        val cy = rect.centerY()
+        canvas.drawLine(cx, cy - 3 * u, cx - 3 * u, cy, stroke)
+        canvas.drawLine(cx - 3 * u, cy, cx, cy + 3 * u, stroke)
+    }
+
     private fun drawMenuIcon(canvas: Canvas, rect: RectF) {
         fill.color = PANEL
         canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
@@ -526,18 +613,22 @@ class GameView(context: Context) : View(context) {
 
     private fun tap(x: Float, y: Float) {
         when (screen) {
+            Screen.TITLE -> tapTitle(x, y)
             Screen.MENU -> tapMenu(x, y)
             Screen.LOADING -> Unit
             Screen.PLAYING -> tapBoard(session!!, x, y)
         }
     }
 
+    private fun tapTitle(x: Float, y: Float) {
+        val (choice, _) = difficultyButtons.firstOrNull { it.second.contains(x, y) } ?: return
+        difficulty = choice
+        showMenu()
+    }
+
     private fun tapMenu(x: Float, y: Float) {
-        difficultyButtons.firstOrNull { it.second.contains(x, y) }?.let { (choice, _) ->
-            difficulty = choice
-            menuPage = (unlocked - 1) / LEVELS_PER_PAGE
-            layoutMenu()
-            invalidate()
+        if (backButton.contains(x, y)) {
+            showTitle()
             return
         }
         levelButtons.firstOrNull { it.second.contains(x, y) }?.let { (number, _) ->
