@@ -152,6 +152,12 @@ Depth-first search over "which queue next":
     blocks a slot until the white around the pips is gone.
   - *Target*: red and white rings take turns. Red eats one ring and gets stuck.
   - *Chess*: a checkerboard. Black and white have to take turns all the time.
+- **Pictures per difficulty** (`Levels.arts`): Easy keeps the simple pictures above. Normal
+  (`NORMAL_ARTS`) and Hard (`HARD_ARTS`) have their own 9 pictures each, with 4 to 9 colors, where
+  colors sit inside other colors, often several layers deep (the gems in *Crown*, the fish in
+  *Aquarium*, the pupil and highlight of *Eye*, the snowman in *Snow globe*). More buried colors
+  give the generator more blockers and the player more volumes that have to wait. All three
+  lists follow the same pacing.
 - **Mystery volumes** (`Volume.hidden`): shown as `?` without color or count until they reach
   the front of their queue. This only affects the display; rules and solver know them. Because
   planning ahead becomes partly impossible, mystery only appears on levels with at least one
@@ -210,6 +216,6 @@ WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
 ## 9. Open ideas
 
 - Hand-drawn ant sprites instead of the drawn ants.
-- More pictures, including ones with more colors or larger sizes.
+- More pictures, or larger ones.
 - Undo, or a single "hint" per level (the solver knows a solution).
 - Release build (minified, not debuggable), which would also make generating on the phone much faster.

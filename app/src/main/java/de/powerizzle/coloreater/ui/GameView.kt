@@ -71,11 +71,13 @@ class GameView(context: Context) : View(context) {
     private val pixels = Paint().apply { isFilterBitmap = false }
     private val versionName: String =
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
-    private val thumbnails: List<Bitmap> = Levels.ARTS.map { art ->
-        Bitmap.createBitmap(art.width, art.height, Bitmap.Config.ARGB_8888).apply {
-            for (y in 0 until art.height) for (x in 0 until art.width) {
-                val c = art.rows[y][x]
-                if (c != '.') setPixel(x, y, PixelArt.PALETTE.getValue(c))
+    private val thumbnails: Map<Difficulty, List<Bitmap>> = Difficulty.entries.associateWith { difficulty ->
+        Levels.arts(difficulty).map { art ->
+            Bitmap.createBitmap(art.width, art.height, Bitmap.Config.ARGB_8888).apply {
+                for (y in 0 until art.height) for (x in 0 until art.width) {
+                    val c = art.rows[y][x]
+                    if (c != '.') setPixel(x, y, PixelArt.PALETTE.getValue(c))
+                }
             }
         }
     }
@@ -286,7 +288,7 @@ class GameView(context: Context) : View(context) {
                 number < reached -> {
                     fill.color = PANEL
                     canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
-                    val thumb = thumbnails[Levels.artIndex(number)]
+                    val thumb = thumbnails.getValue(difficulty)[Levels.artIndex(number)]
                     val size = rect.width() * 0.62f
                     scratch.set(rect.centerX() - size / 2, rect.top + 3 * u, rect.centerX() + size / 2, rect.top + 3 * u + size)
                     canvas.drawBitmap(thumb, null, scratch, pixels)

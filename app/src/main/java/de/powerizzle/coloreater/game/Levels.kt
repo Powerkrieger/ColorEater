@@ -186,6 +186,388 @@ object Levels {
         ),
     )
 
+    /** Normal has its own pictures: many colors, with details walled in behind other colors. */
+    val NORMAL_ARTS = listOf(
+        PixelArt(
+            "Strawberry", listOf(
+                "................",
+                ".......EE.......",
+                "...KKKGEEGKKK...",
+                "..KGGGGEEGGGGK..",
+                ".KGGEGGGGGGEGGK.",
+                ".KRRGGRGGRGGRRK.",
+                "KRRWRRRRRRRRRRDK",
+                "KRWRRYRRRRYRRRDK",
+                "KRRRRRRRYRRRRDDK",
+                ".KRYRRRRRRRYRDK.",
+                ".KRRRRYRRRRRRDK.",
+                "..KRRRRRRYRRDK..",
+                "..KRRYRRRRRRDK..",
+                "...KRRRRRYRDK...",
+                "....KDRRRRDK....",
+                ".....KKKKKK.....",
+            )
+        ),
+        PixelArt(
+            "Pumpkin", listOf(
+                "........EE......",
+                ".......EE.......",
+                "...KKKKKKKKKK...",
+                "..KOOBOOOOBOOK..",
+                ".KOOBOOOOOOBOOK.",
+                "KOOOKOOOOOOKOOOK",
+                "KOOKYKOOOOKYKOOK",
+                "KOKYYYKOOKYYYKOK",
+                "KOKKKKKOOKKKKKOK",
+                "KOBOOOOKKOOOOBOK",
+                "KOKKKKKKKKKKKKOK",
+                "KOKYYKYYYYKYYKOK",
+                ".KOKYYYYYYYYKOK.",
+                ".KOOKKYKKYKKOOK.",
+                "..KKOKKOOKKOKK..",
+                "....KKKKKKKK....",
+            )
+        ),
+        PixelArt(
+            "Frog", listOf(
+                "................",
+                "..KKKK....KKKK..",
+                ".KWWWWK..KWWWWK.",
+                ".KWKKWKKKKWKKWK.",
+                ".KWKKWGGGGWKKWK.",
+                "KGKWWKGGGGKWWKGK",
+                "KGGKKGGGGGGKKGGK",
+                "KGPGGGGGGGGGGPGK",
+                "KGGKGGGGGGGGKGGK",
+                "KGGGKKKKKKKKGGGK",
+                ".KGGGMMMMMMGGGK.",
+                ".KGEGMMMMMMGEGK.",
+                "..KGGMMMMMMGGK..",
+                ".KGGKKGGGGKKGGK.",
+                "KGGK..KGGK..KGGK",
+                "KKKK...KK...KKKK",
+            )
+        ),
+        PixelArt(
+            "Butterfly", listOf(
+                "....K......K....",
+                ".....K....K.....",
+                ".KKK..K..K..KKK.",
+                "KVVVKK.KK.KKVVVK",
+                "KVPPVVKKKKVVPPVK",
+                "KVPWPVVKKVVPWPVK",
+                "KVPPPVVKKVVPPPVK",
+                "KVVVVVLKKLVVVVVK",
+                ".KVVVLLKKLLVVVK.",
+                "..KKKKKKKKKKKK..",
+                ".KLLLLVKKVLLLLK.",
+                "KLLYLLVKKVLLYLLK",
+                "KLYOYLVKKVLYOYLK",
+                "KLLYLLKKKKLLYLLK",
+                ".KLLLK.KK.KLLLK.",
+                "..KKK......KKK..",
+            )
+        ),
+        PixelArt(
+            "Rocket", listOf(
+                ".......KK.......",
+                "......KRRK......",
+                ".....KRRRRK.....",
+                "....KKKKKKKK....",
+                "....KWWWWWCK....",
+                "....KWWKKWCK....",
+                "....KWKALKCK....",
+                "....KWKLLKCK....",
+                "....KWWKKWCK....",
+                "....KWWWWWCK....",
+                "..KKKWWWWWCKKK..",
+                ".KRRKWRRRRCKRRK.",
+                ".KRRKWWWWWCKRRK.",
+                ".KKKKKKKKKKKKKK.",
+                "......OYYO......",
+                ".......OO.......",
+            )
+        ),
+        PixelArt(
+            "Crown", listOf(
+                "................",
+                "..K....KK....K..",
+                ".KRK..KLLK..KRK.",
+                "..KK...KK...KK..",
+                ".KYYK.KYYK.KYYK.",
+                ".KYYYKYYYYKYYYK.",
+                ".KYYYYYYYYYYYYK.",
+                ".KYYYYYYYYYYYYK.",
+                ".KKKKKKKKKKKKKK.",
+                ".KYYYYYYYYYYYYK.",
+                ".KYRWYYLWYYGWYK.",
+                ".KYRRYYLLYYGGYK.",
+                ".KYYYYYYYYYYYYK.",
+                ".KKKKKKKKKKKKKK.",
+                ".KVVVVVVVVVVVVK.",
+                ".KKKKKKKKKKKKKK.",
+            )
+        ),
+        PixelArt(
+            "Clock", listOf(
+                "..KKK......KKK..",
+                ".KYYYK.KK.KYYYK.",
+                ".KYYKKKYYKKKYYK.",
+                "..KKRRRRRRRRKK..",
+                ".KRRKKWWWWKKRRK.",
+                ".KRKWWWCCWWWKRK.",
+                "KRKWWWWKWWWWWKRK",
+                "KRKWCWWKWWWWCKRK",
+                "KRKWWWWRKKKWWKRK",
+                "KRKWWWWWWWWWWKRK",
+                ".KRKWWWWCWWWKRK.",
+                ".KRRKKWWWWKKRRK.",
+                "..KKRRRRRRRRKK..",
+                "...KKKKKKKKKK...",
+                "...KK......KK...",
+                "................",
+            )
+        ),
+        PixelArt(
+            "Potion", listOf(
+                "......KKKK......",
+                ".....KBBBBK.....",
+                ".....KBBBBK.....",
+                "......KAAK......",
+                "......KAAK......",
+                ".....KAAWAK.....",
+                "...KKAAAAAAKK...",
+                "..KAAAAAAAAWAK..",
+                ".KAVVVVVVVVVVAK.",
+                ".KVVWVVPVVVYVVK.",
+                "KAVVVVVVVWVVVVAK",
+                "KAVPVVYVVVVVPVAK",
+                "KAVVVWVVVPVVVVAK",
+                ".KAVVVVVYVVVVAK.",
+                "..KKAAAAAAAAKK..",
+                "....KKKKKKKK....",
+            )
+        ),
+        PixelArt(
+            "Aquarium", listOf(
+                "KKKKKKKKKKKKKKKK",
+                "KAAAAAAAAAAAAAAK",
+                "KLLLLLLLLLLWLLLK",
+                "KLLLLLLLLLLLLWLK",
+                "KLLKKKLLLLLLWLLK",
+                "KLKOOOKLLLLLLLLK",
+                "KKOOKWOKLLLKKKLK",
+                "KOKOOOOKLLKYYYKK",
+                "KKOOOOKLLKYKWYYK",
+                "KLKKKKLELLKYYYKK",
+                "KLLELLLELLLKKKLK",
+                "KLLEELEELLLLGLLK",
+                "KLELEELELLGLGLLK",
+                "KTTTTYTTTTTTTTYK",
+                "KTYTTTTTYTTTTTTK",
+                "KKKKKKKKKKKKKKKK",
+            )
+        ),
+    )
+
+    /**
+     * Hard has its own pictures: more colors, and colors walled in by other colors (often the
+     * same color at several depths), so more volumes have to wait in slots.
+     */
+    val HARD_ARTS = listOf(
+        PixelArt(
+            "Eye", listOf(
+                "................",
+                "....K..K..K.....",
+                ".....KKKKKK.....",
+                "...KKWWWWWWKK...",
+                "..KWWWLLLLWWWK..",
+                ".KWWWLNNNNLWWWK.",
+                "KWWWLNNKKNNLWWWK",
+                "KWWWLNKWKKNLWWWK",
+                "KWWWLNKKKKNLWWWK",
+                "KWWWLNNKKNNLWWWK",
+                ".KWWWLNNNNLWWWK.",
+                "..KWWWLLLLWWWK..",
+                "...KKWWWWWWKK...",
+                ".....KKKKKK.....",
+                "................",
+                "................",
+            )
+        ),
+        PixelArt(
+            "Ladybug", listOf(
+                "................",
+                "....K......K....",
+                ".....K....K.....",
+                "......KKKK......",
+                ".....KWKKWK.....",
+                "...KKKKKKKKKK...",
+                "K.KRWRRKKRRRDK.K",
+                ".KRRKKRKKRKKRDK.",
+                ".KRRKKRKKRKKRDK.",
+                "KKRRRRRKKRRRRRKK",
+                ".KRKKRRKKRRKKDK.",
+                ".KRKKRRKKRRKKDK.",
+                "KKRRRRRKKRRRRDKK",
+                "..KRRKRKKRKRDK..",
+                "...KRRRKKRRDK...",
+                "....KKKKKKKK....",
+            )
+        ),
+        PixelArt(
+            "Watermelon", listOf(
+                "................",
+                "................",
+                "................",
+                "EEEEEEEEEEEEEEEE",
+                "EMMMMMMMMMMMMMME",
+                ".EWWWWWWWWWWWWE.",
+                ".EWRRRRRRRRRRWE.",
+                "..EWRRKRRRKRWE..",
+                "..EWRRRRKRRRWE..",
+                "...EWRKRRRKWE...",
+                "....EWRRKRWE....",
+                ".....EWRRWE.....",
+                "......EWWE......",
+                ".......EE.......",
+                "................",
+                "................",
+            )
+        ),
+        PixelArt(
+            "Donut", listOf(
+                ".....KKKKKK.....",
+                "...KKPPPPPPKK...",
+                "..KPPYPPPLPPPK..",
+                ".KPLPPPVPPPPYPK.",
+                ".KPPPPKKKKPGPPK.",
+                "KPPGPKTTTTKPPPPK",
+                "KPPPKTK..KTKPVPK",
+                "KPYPKTK..KTKPPPK",
+                "KPPPPKTTTTKPPLPK",
+                "KTPVPPKKKKPPYPTK",
+                ".KTPPPLPPGPPPTK.",
+                ".KTTPYPPPPVPTTK.",
+                "..KTTTPPPPTTTK..",
+                "...KKTTTTTTKK...",
+                ".....KKKKKK.....",
+                "................",
+            )
+        ),
+        PixelArt(
+            "Owl", listOf(
+                "..K..........K..",
+                "..KBK......KBK..",
+                "..KBBKKKKKKBBK..",
+                "..KBBBBBBBBBBK..",
+                ".KBKKKKBBKKKKBK.",
+                ".KKWWWWKKWWWWKK.",
+                ".KWYYYWKKWYYYWK.",
+                ".KWYKKWOOWKKYWK.",
+                ".KWYKKWOOWKKYWK.",
+                ".KKWWWWKKWWWWKK.",
+                ".KBBTTTTTTTTBBK.",
+                ".KBTTBTTBTTBTBK.",
+                ".KBTTTTTTTTTTBK.",
+                ".KBBTBTTBTTBBBK.",
+                "..KBBTTTTTTBBK..",
+                "BBBBBOOBBOOBBBBB",
+            )
+        ),
+        PixelArt(
+            "Chest", listOf(
+                "................",
+                "...R......G.....",
+                "..RRR.YY.GGG.L..",
+                "..KKKKKKKKKKKKK.",
+                ".KBBBYBBBBBYBBBK",
+                ".KBRBYBBBBBYBLBK",
+                ".KYYYYYYYYYYYYYK",
+                ".KBBBYBKKKBYBBBK",
+                ".KBBBYKYYYKYBBBK",
+                ".KBBBYKYKYKYBBBK",
+                ".KBBBYKYKYKYBBBK",
+                ".KBBBYKYYYKYBBBK",
+                ".KBBBYBKKKBYBBBK",
+                ".KYYYYYYYYYYYYYK",
+                ".KKKKKKKKKKKKKKK",
+                "................",
+            )
+        ),
+        PixelArt(
+            "Cake", listOf(
+                ".......Y........",
+                "......YOY.......",
+                ".......O........",
+                ".......L........",
+                "......KLK.......",
+                "...KKKKLKKKKK...",
+                "..KPPRPPPPRPPK..",
+                "..KPRYRPPRYRPK..",
+                "..KPPRPPPPRPPK..",
+                "..KWWWWWWWWWWK..",
+                "..KTTTTTTTTTTK..",
+                "..KRRRRRRRRRRK..",
+                "..KTTTTTTTTTTK..",
+                "..KWWWWWWWWWWK..",
+                ".KCCCCCCCCCCCCK.",
+                "..KKKKKKKKKKKK..",
+            )
+        ),
+        PixelArt(
+            "Doll", listOf(
+                "......KKKK......",
+                "....KKRRRRKK....",
+                "...KRRYYYYRRK...",
+                "...KRYSSSSYRK...",
+                "..KRYSKSSKSYRK..",
+                "..KRYPSSSSPYRK..",
+                "..KRYSSRRSSYRK..",
+                "..KRRYSSSSYRRK..",
+                ".KRRRRYYYYRRRRK.",
+                ".KRRWWWWWWWWRRK.",
+                ".KRWWWRRRRWWWRK.",
+                ".KRWWRYYYYRWWRK.",
+                ".KRWWRYGGYRWWRK.",
+                ".KRWWWRRRRWWWRK.",
+                ".KRRWWWGGWWWRRK.",
+                "..KKKKKKKKKKKK..",
+            )
+        ),
+        PixelArt(
+            "Snow globe", listOf(
+                ".....KKKKKK.....",
+                "...KKAAWAAAKK...",
+                "..KAAAAAAAAAWK..",
+                ".KAWAAAAKKKAAAK.",
+                ".KAAEAAKKKKKAWK.",
+                "KAAAEAAWKWKWAAAK",
+                "KAAEEEAWWOWWAAWK",
+                "KAEEEEARRRRRAAAK",
+                "KEEEEEWWRKWWWAAK",
+                "KAABAAWWWWWWWAWK",
+                "KWABAAWWWKWWWAAK",
+                ".KWWWWWWWWWWWWK.",
+                "..KKKKKKKKKKKK..",
+                "..KBBYYYYYYBBK..",
+                "..KBBBBBBBBBBK..",
+                "..KKKKKKKKKKKK..",
+            )
+        ),
+    )
+
+    init {
+        // All lists share the pacing in [artIndex].
+        require(NORMAL_ARTS.size == ARTS.size && HARD_ARTS.size == ARTS.size)
+    }
+
+    fun arts(difficulty: Difficulty) = when (difficulty) {
+        Difficulty.EASY -> ARTS
+        Difficulty.NORMAL -> NORMAL_ARTS
+        Difficulty.HARD -> HARD_ARTS
+    }
+
     /** Level on which picture i of [ARTS] first appears: 1, 2, 4, 7, 10, ... */
     private fun introduction(picture: Int) = if (picture < 2) picture + 1 else 3 * picture - 2
 
@@ -199,13 +581,13 @@ object Levels {
         known.minBy { art -> (number - 1 downTo 1).firstOrNull { artIndex(it) == art } ?: 0 }
     }
 
-    fun art(number: Int): PixelArt = ARTS[artIndex(number)]
+    fun art(number: Int, difficulty: Difficulty): PixelArt = arts(difficulty)[artIndex(number)]
 
     /** True if this level is where its picture shows up for the first time. */
     fun isNewPicture(number: Int) = introduction(artIndex(number)) == number
 
     fun config(number: Int, difficulty: Difficulty): LevelConfig {
-        val art = art(number)
+        val art = art(number, difficulty)
         val scale = when {
             number == 1 -> 1
             number <= 9 -> 2

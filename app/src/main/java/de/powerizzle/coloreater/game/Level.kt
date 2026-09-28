@@ -39,6 +39,12 @@ class PixelArt(val name: String, val rows: List<String>) {
             'T' to 0xFFD9B77E.toInt(), // tan
             'C' to 0xFF8A9499.toInt(), // gray
             'L' to 0xFF4FA3E0.toInt(), // blue
+            'P' to 0xFFF28DB2.toInt(), // pink
+            'V' to 0xFF8E5CC7.toInt(), // purple
+            'N' to 0xFF2F4A8A.toInt(), // navy
+            'E' to 0xFF2E7D4F.toInt(), // dark green
+            'M' to 0xFFA8DC6E.toInt(), // light green
+            'A' to 0xFFA0E3F0.toInt(), // ice blue
         )
     }
 }

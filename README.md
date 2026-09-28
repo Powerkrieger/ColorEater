@@ -6,7 +6,7 @@ its color that are exposed, so volumes of buried colors have to wait and take up
 picture before every slot is blocked.
 
 - Kotlin, a single custom `View` drawn with Canvas, no game engine.
-- 9 pixel-art pictures; Easy / Normal / Hard; levels are winnable by construction and tuned to
+- 27 pixel-art pictures, 9 per difficulty (Normal and Hard have many colors and walled-in areas); Easy / Normal / Hard; levels are winnable by construction and tuned to
   be tight (a solver decides how many slots a level gets).
 
 ## Download
