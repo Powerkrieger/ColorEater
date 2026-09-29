@@ -25,6 +25,7 @@ import de.powerizzle.coloreater.game.PixelArt
 import de.powerizzle.coloreater.game.Status
 import java.io.IOException
 import java.util.concurrent.Executors
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
@@ -34,7 +35,7 @@ import kotlin.math.sin
 
 /** Draws and runs the whole game: level menu, board and result overlay. */
 class GameView(context: Context) : View(context) {
-    private enum class Screen { TITLE, MENU, LOADING, PLAYING }
+    private enum class Screen { TITLE, SETTINGS, MENU, LOADING, PLAYING }
 
     private val progress = context.getSharedPreferences("progress", Context.MODE_PRIVATE)
     private var difficulty: Difficulty =
@@ -95,7 +96,8 @@ class GameView(context: Context) : View(context) {
     private val menuButton = RectF()
     private val backButton = RectF()
     private val restartButton = RectF()
-    private val resetButton = RectF()
+    private val settingsButton = RectF()
+    private val resetButtons = Difficulty.entries.map { it to RectF() }
     private val pictureRect = RectF()
     private var cell = 1f
     private var slotRects: List<RectF> = emptyList()
@@ -216,9 +218,8 @@ class GameView(context: Context) : View(context) {
 
     private fun forget(difficulty: Difficulty) = progress.edit { remove(KEY_SAVED + difficulty.name) }
 
-    /** Locks all levels of the current difficulty again, after asking. */
-    private fun confirmReset() {
-        val choice = difficulty
+    /** Locks all levels of [choice] again, after asking. */
+    private fun confirmReset(choice: Difficulty) {
         AlertDialog.Builder(context)
             .setTitle("Reset ${choice.label}?")
             .setMessage("All ${choice.label} levels lock again and you start over at level 1.")
@@ -227,7 +228,7 @@ class GameView(context: Context) : View(context) {
                 // Written rather than removed: Normal would otherwise fall back to the old key.
                 progress.edit { putInt(KEY_UNLOCKED + choice.name, 1) }
                 forget(choice)
-                if (screen == Screen.MENU && difficulty == choice) showMenu()
+                invalidate()
             }
             .show()
     }
@@ -236,7 +237,7 @@ class GameView(context: Context) : View(context) {
     fun onBackPressed(): Boolean {
         when (screen) {
             Screen.TITLE -> return false
-            Screen.MENU -> showTitle()
+            Screen.SETTINGS, Screen.MENU -> showTitle()
             else -> showMenu()
         }
         return true
@@ -244,6 +245,11 @@ class GameView(context: Context) : View(context) {
 
     private fun showTitle() {
         screen = Screen.TITLE
+        invalidate()
+    }
+
+    private fun showSettings() {
+        screen = Screen.SETTINGS
         invalidate()
     }
 
@@ -261,6 +267,7 @@ class GameView(context: Context) : View(context) {
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         u = w / 100f
         layoutTitle()
+        layoutSettings()
         layoutMenu()
         layoutBoard()
     }
@@ -279,6 +286,7 @@ class GameView(context: Context) : View(context) {
             val top = buttonsTop + i * (buttonHeight + gap)
             choice.second.set(16 * u, top, width - 16 * u, top + buttonHeight)
         }
+        settingsButton.set(width - 13 * u, safeTop(), width - 3 * u, safeTop() + 10 * u)
         val areaTop = safeTop() + 30 * u
         val areaBottom = buttonsTop - 6 * u
         val flowerSize = min(width - 12 * u, areaBottom - areaTop)
@@ -286,10 +294,18 @@ class GameView(context: Context) : View(context) {
         flowerRect.set((width - flowerSize) / 2, flowerTop, (width + flowerSize) / 2, flowerTop + flowerSize)
     }
 
+    /** One row per difficulty, each with its reset button on the right. */
+    private fun layoutSettings() {
+        val top = safeTop() + 36 * u
+        for ((i, pair) in resetButtons.withIndex()) {
+            val y = top + i * 16 * u
+            pair.second.set(width - 30 * u, y, width - 6 * u, y + 11 * u)
+        }
+    }
+
     private fun layoutMenu() {
         val header = safeTop()
         backButton.set(4 * u, header, 16 * u, header + 12 * u)
-        resetButton.set(width - 24 * u, header, width - 4 * u, header + 12 * u)
         levelButtons.clear()
         val columns = 4
         val gap = 3 * u
@@ -355,6 +371,7 @@ class GameView(context: Context) : View(context) {
         canvas.drawColor(BACKGROUND)
         when (screen) {
             Screen.TITLE -> drawTitle(canvas)
+            Screen.SETTINGS -> drawSettings(canvas)
             Screen.MENU -> drawMenu(canvas)
             Screen.LOADING -> drawLoading(canvas)
             Screen.PLAYING -> drawBoard(canvas, session!!)
@@ -384,6 +401,8 @@ class GameView(context: Context) : View(context) {
             canvas.drawText("Level ${unlocked(choice)}", rect.centerX(), rect.centerY() + 5 * u, text)
         }
 
+        drawCogIcon(canvas, settingsButton)
+
         text.color = INK_SOFT
         text.textSize = 3.2f * u
         canvas.drawText("Created with AI", width / 2f, height - 5 * u, text)
@@ -402,15 +421,37 @@ class GameView(context: Context) : View(context) {
         if (width > maxWidth) text.textSize = size * maxWidth / width
     }
 
+    private fun drawSettings(canvas: Canvas) {
+        drawBackIcon(canvas, backButton)
+        text.color = INK
+        text.textSize = 6.5f * u
+        canvas.drawText("Settings", width / 2f, centerTextY(backButton.centerY()), text)
+
+        text.textAlign = Paint.Align.LEFT
+        text.color = INK_SOFT
+        text.textSize = 4 * u
+        canvas.drawText("PROGRESS", 6 * u, resetButtons.first().second.top - 5 * u, text)
+        for ((choice, rect) in resetButtons) {
+            text.textAlign = Paint.Align.LEFT
+            text.color = INK
+            text.textSize = 5.5f * u
+            canvas.drawText(choice.label, 6 * u, rect.centerY() - 0.5f * u, text)
+            text.color = INK_SOFT
+            text.textSize = 3.4f * u
+            canvas.drawText("Level ${unlocked(choice)}", 6 * u, rect.centerY() + 4 * u, text)
+            text.textAlign = Paint.Align.CENTER
+            text.textSize = 4.5f * u
+            // Nothing to reset before the first level is won.
+            val active = unlocked(choice) > 1
+            drawButton(canvas, rect, "Reset", if (active) PANEL else LOCKED, if (active) INK else INK_SOFT)
+        }
+    }
+
     private fun drawMenu(canvas: Canvas) {
         drawBackIcon(canvas, backButton)
         text.color = INK
         text.textSize = 6.5f * u
         canvas.drawText(difficulty.label, width / 2f, centerTextY(backButton.centerY()), text)
-        if (unlocked > 1) {
-            text.textSize = 4 * u
-            drawButton(canvas, resetButton, "Reset", PANEL, INK_SOFT)
-        }
 
         val reached = unlocked
         for ((number, rect) in levelButtons) {
@@ -653,6 +694,29 @@ class GameView(context: Context) : View(context) {
         canvas.drawLine(cx - 3 * u, cy, cx, cy + 3 * u, stroke)
     }
 
+    private fun drawCogIcon(canvas: Canvas, rect: RectF) {
+        fill.color = PANEL
+        canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
+        val cx = rect.centerX()
+        val cy = rect.centerY()
+        val r = rect.width() * 0.3f
+        stroke.color = INK
+        stroke.strokeWidth = r * 0.42f
+        stroke.strokeCap = Paint.Cap.BUTT
+        for (i in 0 until 8) {
+            val a = i * PI / 4
+            canvas.drawLine(
+                cx + (cos(a) * r * 0.6f).toFloat(), cy + (sin(a) * r * 0.6f).toFloat(),
+                cx + (cos(a) * r).toFloat(), cy + (sin(a) * r).toFloat(), stroke,
+            )
+        }
+        stroke.strokeCap = Paint.Cap.ROUND
+        fill.color = INK
+        canvas.drawCircle(cx, cy, r * 0.72f, fill)
+        fill.color = PANEL
+        canvas.drawCircle(cx, cy, r * 0.3f, fill)
+    }
+
     private fun drawMenuIcon(canvas: Canvas, rect: RectF) {
         fill.color = PANEL
         canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
@@ -678,6 +742,7 @@ class GameView(context: Context) : View(context) {
     private fun tap(x: Float, y: Float) {
         when (screen) {
             Screen.TITLE -> tapTitle(x, y)
+            Screen.SETTINGS -> tapSettings(x, y)
             Screen.MENU -> tapMenu(x, y)
             Screen.LOADING -> Unit
             Screen.PLAYING -> tapBoard(session!!, x, y)
@@ -685,18 +750,27 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun tapTitle(x: Float, y: Float) {
+        if (settingsButton.contains(x, y)) {
+            showSettings()
+            return
+        }
         val (choice, _) = difficultyButtons.firstOrNull { it.second.contains(x, y) } ?: return
         difficulty = choice
         showMenu()
     }
 
-    private fun tapMenu(x: Float, y: Float) {
+    private fun tapSettings(x: Float, y: Float) {
         if (backButton.contains(x, y)) {
             showTitle()
             return
         }
-        if (resetButton.contains(x, y) && unlocked > 1) {
-            confirmReset()
+        val (choice, _) = resetButtons.firstOrNull { it.second.contains(x, y) } ?: return
+        if (unlocked(choice) > 1) confirmReset(choice)
+    }
+
+    private fun tapMenu(x: Float, y: Float) {
+        if (backButton.contains(x, y)) {
+            showTitle()
             return
         }
         levelButtons.firstOrNull { it.second.contains(x, y) }?.let { (number, _) ->

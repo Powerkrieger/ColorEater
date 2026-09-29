@@ -83,7 +83,8 @@ carries it back.
   far (with the app version and level number). Opening that level again plays them back at once
   without ants; the rules are deterministic, so this restores it exactly. Winning, losing or
   restarting drops the save, and so does an app update, since levels may be generated
-  differently. The level list of each difficulty has a Reset button that locks its levels again.
+  differently. The settings screen (the cog on the title screen) can reset the progress of each
+  difficulty, which locks its levels again.
 - **Drawing**: the ant is top-down, with three body parts, six legs in an alternating tripod gait
   and antennae. Paths bend slightly (out on one side, back on the other). No image files are needed.
 

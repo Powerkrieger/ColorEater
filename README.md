@@ -25,7 +25,7 @@ volume whose color is still buried has to wait in its slot, and slots are precio
 - 🪤 **Lose** when every slot is full and no volume can eat.
 
 A level in progress is saved after every move, so you can close the app and pick up where you
-left off. The level list of each difficulty can reset its progress.
+left off. Progress of each difficulty can be reset in the settings (the cog on the title screen).
 
 The obvious move is often the wrong one: grabbing the biggest bite right away tends to leave
 buried colors waiting in your slots until you're stuck.
