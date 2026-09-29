@@ -73,11 +73,17 @@ carries it back.
 - **Display**: a pixel stays visible until its ant grabs it. A slot counter shows *rules count
   + pixels not yet picked up*, so it counts down together with the ants. A slot whose volume is
   finished in the rules but still has ants on the way is shown dimmed.
-- **Slots on screen**: the rules always take their first free slot, but on screen a new volume
-  goes to a slot whose ants are all home, so it never shares a slot with a volume that is still
-  finishing. If the only free slot still has ants out, the new volume waits as a small badge on
-  that slot's corner and takes over when the last ant is home. Taps are never delayed, and the
-  new volume's pick-ups come after the old ones anyway.
+- **Slots on screen** (`ui/ScreenSlots.kt`): the rules always take their first free slot, but on
+  screen a new volume goes to a slot whose ants are all home, so it never shares a slot with a
+  volume that is still finishing. If every free slot still has ants out, the new volume waits in
+  line on the slot with the fewest volumes ahead, shown as a small badge on its corner, and takes
+  over when the last ant is home. Taps are never delayed, and the new volume's pick-ups come after
+  the old ones anyway. `ScreenSlotsTest` plays generated levels with random fast taps.
+- **Saving**: after every pick the level in progress is saved as the list of queues picked so
+  far (with the app version and level number). Opening that level again plays them back at once
+  without ants; the rules are deterministic, so this restores it exactly. Winning, losing or
+  restarting drops the save, and so does an app update, since levels may be generated
+  differently. The level list of each difficulty has a Reset button that locks its levels again.
 - **Drawing**: the ant is top-down, with three body parts, six legs in an alternating tripod gait
   and antennae. Paths bend slightly (out on one side, back on the other). No image files are needed.
 

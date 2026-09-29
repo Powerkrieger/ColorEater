@@ -11,6 +11,7 @@ import android.graphics.Typeface
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
@@ -94,6 +95,7 @@ class GameView(context: Context) : View(context) {
     private val menuButton = RectF()
     private val backButton = RectF()
     private val restartButton = RectF()
+    private val resetButton = RectF()
     private val pictureRect = RectF()
     private var cell = 1f
     private var slotRects: List<RectF> = emptyList()
@@ -181,12 +183,53 @@ class GameView(context: Context) : View(context) {
         null
     }
 
-    private fun begin(level: Level) {
-        session = Session(level)
+    /** Starts [level], continuing where it was left if it was saved and [resume] is set. */
+    private fun begin(level: Level, resume: Boolean = true) {
+        session = Session(level).apply {
+            if (resume) savedPicks(level.config)?.let(::restore) else forget(level.config.difficulty)
+        }
         screen = Screen.PLAYING
         layoutBoard()
         prepare(level.config.number + 1)
         invalidate()
+    }
+
+    // The level in progress is saved as the queues picked so far. The rules are deterministic, so
+    // playing them again restores it exactly. A save from another app version is dropped, because
+    // the level may have been generated differently.
+
+    private fun save(s: Session) {
+        val config = s.level.config
+        if (s.state.status != Status.PLAYING) {
+            forget(config.difficulty)
+            return
+        }
+        val saved = "$versionName|${config.number}|${s.picks.joinToString(",")}"
+        progress.edit { putString(KEY_SAVED + config.difficulty.name, saved) }
+    }
+
+    private fun savedPicks(config: LevelConfig): List<Int>? {
+        val parts = progress.getString(KEY_SAVED + config.difficulty.name, null)?.split("|") ?: return null
+        if (parts.size != 3 || parts[0] != versionName || parts[1] != config.number.toString()) return null
+        return parts[2].split(",").filter { it.isNotEmpty() }.map { it.toIntOrNull() ?: return null }
+    }
+
+    private fun forget(difficulty: Difficulty) = progress.edit { remove(KEY_SAVED + difficulty.name) }
+
+    /** Locks all levels of the current difficulty again, after asking. */
+    private fun confirmReset() {
+        val choice = difficulty
+        AlertDialog.Builder(context)
+            .setTitle("Reset ${choice.label}?")
+            .setMessage("All ${choice.label} levels lock again and you start over at level 1.")
+            .setNegativeButton("Cancel", null)
+            .setPositiveButton("Reset") { _, _ ->
+                // Written rather than removed: Normal would otherwise fall back to the old key.
+                progress.edit { putInt(KEY_UNLOCKED + choice.name, 1) }
+                forget(choice)
+                if (screen == Screen.MENU && difficulty == choice) showMenu()
+            }
+            .show()
     }
 
     /** Returns false if the back press should close the app. */
@@ -246,6 +289,7 @@ class GameView(context: Context) : View(context) {
     private fun layoutMenu() {
         val header = safeTop()
         backButton.set(4 * u, header, 16 * u, header + 12 * u)
+        resetButton.set(width - 24 * u, header, width - 4 * u, header + 12 * u)
         levelButtons.clear()
         val columns = 4
         val gap = 3 * u
@@ -363,6 +407,10 @@ class GameView(context: Context) : View(context) {
         text.color = INK
         text.textSize = 6.5f * u
         canvas.drawText(difficulty.label, width / 2f, centerTextY(backButton.centerY()), text)
+        if (unlocked > 1) {
+            text.textSize = 4 * u
+            drawButton(canvas, resetButton, "Reset", PANEL, INK_SOFT)
+        }
 
         val reached = unlocked
         for ((number, rect) in levelButtons) {
@@ -647,6 +695,10 @@ class GameView(context: Context) : View(context) {
             showTitle()
             return
         }
+        if (resetButton.contains(x, y) && unlocked > 1) {
+            confirmReset()
+            return
+        }
         levelButtons.firstOrNull { it.second.contains(x, y) }?.let { (number, _) ->
             if (number <= unlocked) startLevel(number)
             return
@@ -665,17 +717,17 @@ class GameView(context: Context) : View(context) {
             val number = s.level.config.number
             when {
                 primaryButton.contains(x, y) ->
-                    if (s.state.status == Status.WON) startLevel(number + 1) else begin(s.level)
+                    if (s.state.status == Status.WON) startLevel(number + 1) else begin(s.level, resume = false)
                 secondaryButton.contains(x, y) -> showMenu()
             }
             return
         }
         when {
             menuButton.contains(x, y) -> showMenu()
-            restartButton.contains(x, y) -> begin(s.level)
+            restartButton.contains(x, y) -> begin(s.level, resume = false)
             else -> {
                 val queue = queueRects.indexOfFirst { it.contains(x, y) }
-                if (queue >= 0) s.pick(queue, now)
+                if (queue >= 0 && s.pick(queue, now)) save(s)
             }
         }
         invalidate()
@@ -688,6 +740,7 @@ class GameView(context: Context) : View(context) {
         const val KEY_UNLOCKED = "unlocked_"
         const val KEY_UNLOCKED_OLD = "unlocked"
         const val KEY_DIFFICULTY = "difficulty"
+        const val KEY_SAVED = "saved_"
         const val LOCKED_SHOWN = 2
         const val LEVELS_PER_PAGE = 20
         const val OVERLAY_DELAY = 0.5
