@@ -10,7 +10,10 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.util.Log
 import android.view.MotionEvent
+import android.view.VelocityTracker
 import android.view.View
+import android.view.ViewConfiguration
+import android.widget.OverScroller
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
@@ -64,7 +67,19 @@ class GameView(context: Context) : View(context) {
     private var screen = Screen.TITLE
     private var loadingNumber = 0
     private var session: Session? = null
-    private var menuPage = (unlocked - 1) / LEVELS_PER_PAGE
+
+    // The level list scrolls vertically; taps there only count if the finger didn't drag.
+    private var menuScroll = 0f
+    private var menuScrollMax = 0f
+    private var menuListTop = 0f
+    private val scroller = OverScroller(context)
+    private var velocity: VelocityTracker? = null
+    private var touchStartY = 0f
+    private var touchLastY = 0f
+    private var dragging = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    private val minFling = ViewConfiguration.get(context).scaledMinimumFlingVelocity
+    private val maxFling = ViewConfiguration.get(context).scaledMaximumFlingVelocity
 
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -106,8 +121,6 @@ class GameView(context: Context) : View(context) {
     private val secondaryButton = RectF()
     private val levelButtons = ArrayList<Pair<Int, RectF>>()
     private val difficultyButtons = Difficulty.entries.map { it to RectF() }
-    private val previousPage = RectF()
-    private val nextPage = RectF()
     private val scratch = RectF()
     private val badge = RectF()
 
@@ -256,8 +269,12 @@ class GameView(context: Context) : View(context) {
     private fun showMenu() {
         screen = Screen.MENU
         session = null
-        menuPage = (unlocked - 1) / LEVELS_PER_PAGE
         layoutMenu()
+        // Start with the current level in the middle of the list.
+        levelButtons.firstOrNull { it.first == unlocked }?.let { (_, rect) ->
+            scroller.forceFinished(true)
+            menuScroll = (rect.centerY() - (menuListTop + height) / 2).coerceIn(0f, menuScrollMax)
+        }
         invalidate()
     }
 
@@ -311,19 +328,17 @@ class GameView(context: Context) : View(context) {
         val gap = 3 * u
         val buttonWidth = (width - 8 * u - gap * (columns - 1)) / columns
         val buttonHeight = buttonWidth * 1.2f
-        val top = header + 18 * u
-        // Only a couple of locked levels are teased; the rest of the page stays empty.
-        val lastShown = unlocked + LOCKED_SHOWN
-        for (i in 0 until LEVELS_PER_PAGE) {
-            val number = menuPage * LEVELS_PER_PAGE + i + 1
-            if (number > lastShown) break
+        menuListTop = header + 15 * u
+        val top = menuListTop + 3 * u
+        // Only a couple of locked levels are teased. Positions are in list coordinates, before scrolling.
+        for (i in 0 until unlocked + LOCKED_SHOWN) {
             val left = 4 * u + (i % columns) * (buttonWidth + gap)
             val y = top + (i / columns) * (buttonHeight + gap)
-            levelButtons += number to RectF(left, y, left + buttonWidth, y + buttonHeight)
+            levelButtons += i + 1 to RectF(left, y, left + buttonWidth, y + buttonHeight)
         }
-        val arrowTop = top + 5 * (buttonHeight + gap) + 2 * u
-        previousPage.set(4 * u, arrowTop, 30 * u, arrowTop + 12 * u)
-        nextPage.set(70 * u, arrowTop, 96 * u, arrowTop + 12 * u)
+        val bottom = levelButtons.lastOrNull()?.second?.bottom ?: top
+        menuScrollMax = max(0f, bottom + 4 * u - height)
+        menuScroll = menuScroll.coerceIn(0f, menuScrollMax)
     }
 
     private fun layoutBoard() {
@@ -454,7 +469,11 @@ class GameView(context: Context) : View(context) {
         canvas.drawText(difficulty.label, width / 2f, centerTextY(backButton.centerY()), text)
 
         val reached = unlocked
+        canvas.save()
+        canvas.clipRect(0f, menuListTop, width.toFloat(), height.toFloat())
+        canvas.translate(0f, -menuScroll)
         for ((number, rect) in levelButtons) {
+            if (rect.bottom < menuListTop + menuScroll || rect.top > height + menuScroll) continue
             when {
                 // Completed: the picture is the reward, so only these show it.
                 number < reached -> {
@@ -496,10 +515,14 @@ class GameView(context: Context) : View(context) {
             canvas.drawText(number.toString(), rect.centerX(), rect.bottom - 3 * u, text)
         }
 
-        text.textSize = 7 * u
-        if (menuPage > 0) drawButton(canvas, previousPage, "‹", PANEL, INK)
-        if (menuPage < (reached - 1) / LEVELS_PER_PAGE) drawButton(canvas, nextPage, "›", PANEL, INK)
+        canvas.restore()
+    }
 
+    override fun computeScroll() {
+        if (screen == Screen.MENU && scroller.computeScrollOffset()) {
+            menuScroll = scroller.currY.toFloat()
+            postInvalidateOnAnimation()
+        }
     }
 
     private fun drawLock(canvas: Canvas, cx: Float, cy: Float, size: Float) {
@@ -735,8 +758,51 @@ class GameView(context: Context) : View(context) {
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (event.actionMasked == MotionEvent.ACTION_DOWN) tap(event.x, event.y)
+        if (screen == Screen.MENU) {
+            touchMenu(event)
+        } else if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            tap(event.x, event.y)
+        }
         return true
+    }
+
+    /** Drag and fling to scroll the level list; a touch that doesn't move is a tap on release. */
+    private fun touchMenu(event: MotionEvent) {
+        val tracker = velocity ?: VelocityTracker.obtain().also { velocity = it }
+        tracker.addMovement(event)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                // Catching a running fling stops it without counting as a tap.
+                dragging = !scroller.isFinished
+                scroller.forceFinished(true)
+                touchStartY = event.y
+                touchLastY = event.y
+            }
+            MotionEvent.ACTION_MOVE -> {
+                if (!dragging && abs(event.y - touchStartY) > touchSlop) dragging = true
+                if (dragging) {
+                    menuScroll = (menuScroll + touchLastY - event.y).coerceIn(0f, menuScrollMax)
+                    invalidate()
+                }
+                touchLastY = event.y
+            }
+            MotionEvent.ACTION_UP -> {
+                tracker.computeCurrentVelocity(1000, maxFling.toFloat())
+                val speed = tracker.yVelocity
+                if (!dragging) {
+                    tap(event.x, event.y)
+                } else if (abs(speed) > minFling) {
+                    scroller.fling(0, menuScroll.toInt(), 0, -speed.toInt(), 0, 0, 0, menuScrollMax.toInt())
+                    postInvalidateOnAnimation()
+                }
+                tracker.recycle()
+                velocity = null
+            }
+            MotionEvent.ACTION_CANCEL -> {
+                tracker.recycle()
+                velocity = null
+            }
+        }
     }
 
     private fun tap(x: Float, y: Float) {
@@ -773,16 +839,9 @@ class GameView(context: Context) : View(context) {
             showTitle()
             return
         }
-        levelButtons.firstOrNull { it.second.contains(x, y) }?.let { (number, _) ->
-            if (number <= unlocked) startLevel(number)
-            return
-        }
-        val pages = (unlocked - 1) / LEVELS_PER_PAGE
-        if (previousPage.contains(x, y) && menuPage > 0) menuPage--
-        else if (nextPage.contains(x, y) && menuPage < pages) menuPage++
-        else return
-        layoutMenu()
-        invalidate()
+        if (y < menuListTop) return
+        val (number, _) = levelButtons.firstOrNull { it.second.contains(x, y + menuScroll) } ?: return
+        if (number <= unlocked) startLevel(number)
     }
 
     private fun tapBoard(s: Session, x: Float, y: Float) {
@@ -816,7 +875,6 @@ class GameView(context: Context) : View(context) {
         const val KEY_DIFFICULTY = "difficulty"
         const val KEY_SAVED = "saved_"
         const val LOCKED_SHOWN = 2
-        const val LEVELS_PER_PAGE = 20
         const val OVERLAY_DELAY = 0.5
 
         const val BACKGROUND = 0xFFF4EDE1.toInt()

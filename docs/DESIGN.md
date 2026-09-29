@@ -209,8 +209,9 @@ Each difficulty has its own progress and its own seed.
 - No picture repeats for a long time: on Easy until level 31, on Normal until level 27, on
   Hard until level 43.
 - The level menu shows pictures **only for completed levels**. The current level is a `?` (with
-  `NEW` if it brings a new picture), and only the next two locked levels are shown. The top bar
-  of a level names its category.
+  `NEW` if it brings a new picture), and only the next two locked levels are shown. The list
+  scrolls up and down and opens with the current level in view. The top bar of a level names
+  its category.
 
 ## 7. Pre-generated levels
 
