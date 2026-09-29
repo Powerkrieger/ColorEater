@@ -5,6 +5,7 @@ import android.graphics.Color
 import de.powerizzle.coloreater.game.GameState
 import de.powerizzle.coloreater.game.Level
 import de.powerizzle.coloreater.game.Picture
+import de.powerizzle.coloreater.game.Removal
 import de.powerizzle.coloreater.game.Status
 import de.powerizzle.coloreater.game.Volume
 
@@ -20,8 +21,18 @@ class Session(val level: Level) {
     /** Pixels already eaten by the rules but not yet picked up by an ant, per volume. */
     private val notPickedUp = HashMap<Volume, Int>()
 
-    /** The volume most recently placed in each slot, kept while its ants are still working. */
+    /**
+     * Slots on screen are separate from the slots of the rules. The rules always use their first
+     * free slot (the generator plays the same way), but on screen a new volume goes to a slot
+     * whose ants are all home, so it never shares a slot with a volume that is still finishing.
+     */
     private val shownInSlot = arrayOfNulls<Volume>(state.slots.size)
+
+    /** A volume waiting to take over a slot on screen once the ants of the one before are home. */
+    private val incoming = arrayOfNulls<Volume>(state.slots.size)
+
+    /** The slot on screen of every volume that is still in a slot of the rules or has ants out. */
+    private val screenSlot = HashMap<Volume, Int>()
 
     /** Time the queue was tapped without a free slot, for a short shake. */
     val rejectedAt = DoubleArray(state.queues.size) { -10.0 }
@@ -45,13 +56,44 @@ class Session(val level: Level) {
             rejectedAt[queue] = now
             return
         }
-        // Always the first free slot: the level generator plays the same way, and the slot
-        // order decides which volume eats first.
-        val slot = state.freeSlot()
-        shownInSlot[slot] = state.queues[queue].first()
-        val removals = state.pick(queue, slot)
+        promote()
+        val volume = state.queues[queue].first()
+        val slot = screenSlotFor()
+        if (shownInSlot[slot] == null) shownInSlot[slot] = volume else incoming[slot] = volume
+        screenSlot[volume] = slot
+        // Always the first free slot in the rules: the level generator plays the same way, and
+        // the slot order decides which volume eats first.
+        val removals = state.pick(queue, state.freeSlot())
         for (removal in removals) notPickedUp.merge(removal.volume, 1, Int::plus)
-        swarm.add(removals)
+        swarm.add(removals.map { Removal(screenSlot.getValue(it.volume), it.pixel, it.volume) })
+    }
+
+    /** Hands every slot on screen whose volume is done to the volume waiting for it. */
+    private fun promote() {
+        for (slot in shownInSlot.indices) {
+            val shown = shownInSlot[slot] ?: continue
+            if (!isDone(shown)) continue
+            screenSlot.remove(shown)
+            shownInSlot[slot] = incoming[slot]
+            incoming[slot] = null
+        }
+    }
+
+    private fun isLive(volume: Volume) = state.slots.any { it?.volume === volume }
+
+    /** No longer in the rules and all its pixels picked up. */
+    private fun isDone(volume: Volume) = !isLive(volume) && pending(volume) == null
+
+    /**
+     * The first empty slot on screen; if there is none, the finishing slot with the fewest pixels
+     * left to pick up. There always is one: the rules have a free slot, so there are fewer live
+     * volumes than slots.
+     */
+    private fun screenSlotFor(): Int {
+        val slots = shownInSlot.indices
+        slots.firstOrNull { shownInSlot[it] == null }?.let { return it }
+        return slots.filter { incoming[it] == null && !isLive(shownInSlot[it]!!) }
+            .minBy { pending(shownInSlot[it]!!) ?: 0 }
     }
 
     fun update(now: Double, geometry: AntSwarm.Geometry) {
@@ -60,21 +102,23 @@ class Session(val level: Level) {
             bitmap.setPixel(picture.column(removal.pixel), picture.row(removal.pixel), Color.TRANSPARENT)
             notPickedUp.computeIfPresent(removal.volume) { _, n -> if (n > 1) n - 1 else null }
         }
+        promote()
         if (settledAt < 0 && state.status != Status.PLAYING && swarm.isIdle) settledAt = now
     }
 
     private fun pending(volume: Volume): Int? = notPickedUp[volume]
 
-    /** What a slot shows: the volume, the count left to carry away and whether it is only finishing up. */
-    class SlotView(val volume: Volume, val count: Int, val finishing: Boolean)
+    /**
+     * What a slot on screen shows: the volume, the count left to carry away, whether it is only
+     * finishing up, and the volume waiting to take over.
+     */
+    class SlotView(val volume: Volume, val count: Int, val finishing: Boolean, val incoming: Volume?)
 
     fun slotView(slot: Int): SlotView? {
-        val occupant = state.slots[slot]
-        if (occupant != null) {
-            return SlotView(occupant.volume, occupant.remaining + (pending(occupant.volume) ?: 0), false)
-        }
         val shown = shownInSlot[slot] ?: return null
-        val left = pending(shown) ?: return null
-        return SlotView(shown, left, true)
+        val occupant = state.slots.firstOrNull { it?.volume === shown }
+        val count = (occupant?.remaining ?: 0) + (pending(shown) ?: 0)
+        if (count == 0) return null
+        return SlotView(shown, count, occupant == null, incoming[slot])
     }
 }

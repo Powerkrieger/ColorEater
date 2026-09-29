@@ -105,6 +105,7 @@ class GameView(context: Context) : View(context) {
     private val previousPage = RectF()
     private val nextPage = RectF()
     private val scratch = RectF()
+    private val badge = RectF()
 
     /** The title flower's ants live just off the screen edge, in the direction the flower picked. */
     private val flowerGeometry = object : AntSwarm.Geometry {
@@ -464,6 +465,13 @@ class GameView(context: Context) : View(context) {
                 canvas.drawRoundRect(rect, rect.width() * 0.2f, rect.width() * 0.2f, stroke)
             } else {
                 drawVolume(canvas, rect, s.level.palette[view.volume.color], view.count, if (view.finishing) 110 else 255)
+                // The volume that takes over once these ants are home waits in the corner.
+                val next = view.incoming
+                if (next != null) {
+                    val size = rect.width() * 0.5f
+                    badge.set(rect.right - size * 0.75f, rect.top - size * 0.25f, rect.right + size * 0.25f, rect.top + size * 0.75f)
+                    drawVolume(canvas, badge, s.level.palette[next.color], next.count, 255)
+                }
             }
             if (stuck && s.settledAt >= 0) {
                 stroke.color = ACCENT
