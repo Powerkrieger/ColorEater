@@ -36,6 +36,7 @@ class PixelArt(val name: String, val rows: List<String>) {
             'G' to 0xFF4CAF50.toInt(), // green
             'Y' to 0xFFF6CF3F.toInt(), // yellow
             'O' to 0xFFF08A24.toInt(), // orange
+            'Q' to 0xFFC0621C.toInt(), // dark orange
             'T' to 0xFFD9B77E.toInt(), // tan
             'C' to 0xFF8A9499.toInt(), // gray
             'L' to 0xFF4FA3E0.toInt(), // blue
@@ -45,6 +46,8 @@ class PixelArt(val name: String, val rows: List<String>) {
             'E' to 0xFF2E7D4F.toInt(), // dark green
             'M' to 0xFFA8DC6E.toInt(), // light green
             'A' to 0xFFA0E3F0.toInt(), // ice blue
+            'F' to 0xFFF0C8A0.toInt(), // skin
+            'H' to 0xFF4A3020.toInt(), // dark brown
         )
     }
 }

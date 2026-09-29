@@ -76,13 +76,13 @@ class GameView(context: Context) : View(context) {
     private val pixels = Paint().apply { isFilterBitmap = false }
     private val versionName: String =
         context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: ""
-    private val thumbnails: Map<Difficulty, List<Bitmap>> = Difficulty.entries.associateWith { difficulty ->
-        Levels.arts(difficulty).map { art ->
-            Bitmap.createBitmap(art.width, art.height, Bitmap.Config.ARGB_8888).apply {
-                for (y in 0 until art.height) for (x in 0 until art.width) {
-                    val c = art.rows[y][x]
-                    if (c != '.') setPixel(x, y, PixelArt.PALETTE.getValue(c))
-                }
+    private val thumbnails = HashMap<PixelArt, Bitmap>()
+
+    private fun thumbnail(art: PixelArt) = thumbnails.getOrPut(art) {
+        Bitmap.createBitmap(art.width, art.height, Bitmap.Config.ARGB_8888).apply {
+            for (y in 0 until art.height) for (x in 0 until art.width) {
+                val c = art.rows[y][x]
+                if (c != '.') setPixel(x, y, PixelArt.PALETTE.getValue(c))
             }
         }
     }
@@ -371,9 +371,15 @@ class GameView(context: Context) : View(context) {
                 number < reached -> {
                     fill.color = PANEL
                     canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
-                    val thumb = thumbnails.getValue(difficulty)[Levels.artIndex(number)]
-                    val size = rect.width() * 0.62f
-                    scratch.set(rect.centerX() - size / 2, rect.top + 3 * u, rect.centerX() + size / 2, rect.top + 3 * u + size)
+                    val art = Levels.pick(number, difficulty).art
+                    val thumb = thumbnail(art)
+                    // Pictures are not all square: fit them into the square above the number.
+                    val box = rect.width() * 0.62f
+                    val size = box / maxOf(art.width, art.height)
+                    val w = size * art.width
+                    val h = size * art.height
+                    val top = rect.top + 3 * u + (box - h) / 2
+                    scratch.set(rect.centerX() - w / 2, top, rect.centerX() + w / 2, top + h)
                     canvas.drawBitmap(thumb, null, scratch, pixels)
                 }
                 number == reached -> {
@@ -385,7 +391,7 @@ class GameView(context: Context) : View(context) {
                     text.color = ACCENT
                     text.textSize = rect.width() * 0.4f
                     canvas.drawText("?", rect.centerX(), rect.top + rect.width() * 0.5f, text)
-                    if (Levels.isNewPicture(number)) {
+                    if (Levels.pick(number, difficulty).isNew) {
                         text.textSize = 3.2f * u
                         canvas.drawText("NEW", rect.centerX(), rect.top + 4.5f * u, text)
                     }
@@ -439,6 +445,7 @@ class GameView(context: Context) : View(context) {
         text.color = INK_SOFT
         text.textSize = 3.3f * u
         val hint = buildList {
+            add(Levels.pick(config.number, config.difficulty).category.name)
             add(config.difficulty.label)
             add("${s.state.slots.size} slots")
             if (config.slack == 0 && config.number > 1) add("no room for mistakes")

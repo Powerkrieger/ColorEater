@@ -27,19 +27,21 @@ volume whose color is still buried has to wait in its slot, and slots are precio
 The obvious move is often the wrong one: grabbing the biggest bite right away tends to leave
 buried colors waiting in your slots until you're stuck.
 
-## 27 pictures to uncover
+## 111 pictures to uncover
 
 <p align="center">
-  <img src="docs/images/pictures.png" alt="The first picture of each difficulty: a heart, a strawberry and an eye" width="512">
+  <img src="docs/images/pictures.png" alt="One picture from every category: fruits, animals, flowers, shapes and things on Easy; fruits, animals, paintings, flowers and objects on Normal; fruits, sweets, animals, treasures, toys, faces, paintings and stained glass on Hard" width="640">
 </p>
 
-Every difficulty has its own set of 9 pictures. These are the first ones; the rest are only
-revealed as you play, a new one every few levels. Completed levels show their picture in the
-level list.
+Every level brings a picture, and they come in themed runs: a few fruits, then a couple of
+animals, then some famous paintings, and so on. Each category starts simple and gets harder
+every time it comes around, and once it has shown everything, its early pictures drop out.
+Completed levels show their picture in the level list.
 
 | | Easy | Normal | Hard |
 |---|---|---|---|
-| Pictures | Simple shapes | Many colors, details tucked inside | Colors walled in several layers deep |
+| Pictures | 32 simple ones with few colors | 31 with many colors and details tucked inside | 48 with colors walled in several layers deep |
+| Categories | 5, taking turns | 5, taking turns | 8, from easy to hard: new ones come in, the easiest leave |
 | Spare slots | 2 | 1 | Usually none |
 | Mystery volumes `?` | – | Sometimes | On every third level |
 
@@ -74,7 +76,8 @@ WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
 
 ### Project layout
 
-- `app/src/main/java/.../game/`: rules, solver, level generator, pictures (pure Kotlin)
+- `app/src/main/java/.../game/`: rules, solver, level generator, categories (pure Kotlin)
+- `app/src/main/java/.../game/pictures/`: the pictures, one file per difficulty, one letter per pixel
 - `app/src/main/java/.../ui/`: game view, title animation, play session, ants
 - `app/src/main/assets/levels/`: pre-generated levels
 

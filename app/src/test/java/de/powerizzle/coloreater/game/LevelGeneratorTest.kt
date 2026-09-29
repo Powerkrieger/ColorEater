@@ -38,10 +38,50 @@ class LevelGeneratorTest {
 }
 
 class LevelsTest {
+    private fun names(difficulty: Difficulty, levels: IntRange) =
+        levels.map { Levels.pick(it, difficulty).art.name }
+
     @Test
-    fun picturesAreIntroducedSlowlyAndNotRepeatedBackToBack() {
-        val firstSeen = Levels.ARTS.indices.map { art -> (1..40).first { Levels.artIndex(it) == art } }
-        assertEquals(listOf(1, 2, 4, 7, 10, 13, 16, 19, 22), firstSeen)
-        for (number in 2..40) assertTrue(Levels.artIndex(number) != Levels.artIndex(number - 1))
+    fun picturesDoNotRepeatForALongTime() {
+        for (difficulty in Difficulty.entries) {
+            val firstRepeat = (1..500).first { !Levels.pick(it, difficulty).isNew }
+            println("$difficulty: first repeated picture on level $firstRepeat")
+            assertTrue("$difficulty repeats on level $firstRepeat", firstRepeat > 25)
+            for (number in 2..200) {
+                assertTrue(Levels.pick(number, difficulty).art !== Levels.pick(number - 1, difficulty).art)
+            }
+        }
+    }
+
+    @Test
+    fun easyAndNormalCycleThroughTheirCategories() {
+        for (difficulty in listOf(Difficulty.EASY, Difficulty.NORMAL)) {
+            val categories = Levels.track(difficulty).categories
+            val round = categories.sumOf { it.run }
+            val expected = categories.flatMap { category -> List(category.run) { category } }
+            for (start in listOf(1, 1 + round, 1 + 5 * round)) {
+                assertEquals(expected, (start until start + round).map { Levels.pick(it, difficulty).category })
+            }
+        }
+    }
+
+    @Test
+    fun hardBringsInHarderCategoriesAndDropsEasyOnes() {
+        val categories = Levels.track(Difficulty.HARD).categories
+        val order = (1..300).map { Levels.pick(it, Difficulty.HARD).category }.distinct()
+        assertEquals(categories, order)
+        val late = (200..300).map { Levels.pick(it, Difficulty.HARD).category }.toSet()
+        assertTrue(categories.first() !in late)
+        assertTrue(categories.last() in late)
+    }
+
+    @Test
+    fun categoriesDropTheirEarlyPictures() {
+        for (difficulty in Difficulty.entries) {
+            val late = names(difficulty, 400..500).toSet()
+            for (category in Levels.track(difficulty).categories) {
+                if (category.arts.size > 4) assertTrue(category.arts.first().name !in late)
+            }
+        }
     }
 }

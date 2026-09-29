@@ -73,6 +73,11 @@ carries it back.
 - **Display**: a pixel stays visible until its ant grabs it. A slot counter shows *rules count
   + pixels not yet picked up*, so it counts down together with the ants. A slot whose volume is
   finished in the rules but still has ants on the way is shown dimmed.
+- **Slots on screen**: the rules always take their first free slot, but on screen a new volume
+  goes to a slot whose ants are all home, so it never shares a slot with a volume that is still
+  finishing. If the only free slot still has ants out, the new volume waits as a small badge on
+  that slot's corner and takes over when the last ant is home. Taps are never delayed, and the
+  new volume's pick-ups come after the old ones anyway.
 - **Drawing**: the ant is top-down, with three body parts, six legs in an alternating tripod gait
   and antennae. Paths bend slightly (out on one side, back on the other). No image files are needed.
 
@@ -162,12 +167,10 @@ Depth-first search over "which queue next":
     blocks a slot until the white around the pips is gone.
   - *Target*: red and white rings take turns. Red eats one ring and gets stuck.
   - *Chess*: a checkerboard. Black and white have to take turns all the time.
-- **Pictures per difficulty** (`Levels.arts`): Easy keeps the simple pictures above. Normal
-  (`NORMAL_ARTS`) and Hard (`HARD_ARTS`) have their own 9 pictures each, with 4 to 9 colors, where
-  colors sit inside other colors, often several layers deep (the gems in *Crown*, the fish in
-  *Aquarium*, the pupil and highlight of *Eye*, the snowman in *Snow globe*). More buried colors
-  give the generator more blockers and the player more volumes that have to wait. All three
-  lists follow the same pacing.
+- **Pictures per difficulty** (`game/pictures/`): Easy has simple pictures with few colors.
+  Normal and Hard have their own, with colors inside other colors, often several layers deep
+  (the gems in *Crown*, the pupil and highlight of *Eye*, the panes of the stained glass). More
+  buried colors give the generator more blockers and the player more volumes that have to wait.
 - **Mystery volumes** (`Volume.hidden`): shown as `?` without color or count until they reach
   the front of their queue. This only affects the display; rules and solver know them. Because
   planning ahead becomes partly impossible, mystery only appears on levels with at least one
@@ -181,18 +184,26 @@ Depth-first search over "which queue next":
 | Blocker probability | 0.25 → 0.5 | 0.45 → 0.8 | 0.6 → 0.85 |
 | Mystery volumes | none | 25 % from level 5 | 40 % on the every-3rd levels |
 
-Blockers increase every 9 levels. Picture size depends on the level only: level 1 is 16×16,
-levels 2 to 9 are 2× (32×32), from level 10 on 3× (48×48, up to 2,304 pixels, volumes up to 100).
+Blockers increase every 9 levels. Pictures are drawn at 16 to 26 pixels a side and scaled up to
+about 16×16 on level 1, 32×32 on levels 2 to 9 and 48×48 from level 10 on (at most 52×52 cells,
+so generating on the phone stays fast). Volumes go up to about one per 17 cells, at most 100.
 Each difficulty has its own progress and its own seed.
 
-### Pictures are rewards
+### Pictures come in categories (`game/Catalog.kt`)
 
-- A **new picture** appears on levels 1, 2, 4, 7, 10, 13, ... (every 3 levels from level 4 on).
-  The 9 pictures last until level 22.
-- The levels in between reuse the known picture that was **seen longest ago** (never the same as
-  the level before), bigger or with harder settings.
+- Every level brings the next picture of its difficulty's `Track`. A `Category` (Fruits,
+  Animals, Paintings, ...) lists its pictures from easy to hard, and every time it comes around
+  it shows its next `run` pictures (for example 4 fruits, then 2 animals). Once a category has
+  shown everything, only its hardest few keep coming back, so the early ones drop out.
+- **Easy and Normal** have 5 categories each that take turns in every round.
+- **Hard** is a ladder of 8 categories from easy (Fruits, Sweets) to hard (Paintings, Stained
+  glass). Every round brings in the next category, and once 3 are active the easiest one
+  leaves, until only the hardest ones are left.
+- No picture repeats for a long time: on Easy until level 31, on Normal until level 27, on
+  Hard until level 43.
 - The level menu shows pictures **only for completed levels**. The current level is a `?` (with
-  `NEW` if it brings a new picture), and only the next two locked levels are shown.
+  `NEW` if it brings a new picture), and only the next two locked levels are shown. The top bar
+  of a level names its category.
 
 ## 7. Pre-generated levels
 
@@ -220,12 +231,13 @@ WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
 - `GameStateTest`: exposure, waiting volumes, losing, solver.
 - `LevelGeneratorTest`: levels 1 to 27 of every difficulty are winnable and use every pixel
   exactly. It prints slots, whether one slot less would be enough, and whether greedy play wins.
-- `LevelsTest`: picture pacing (1, 2, 4, 7, ... and never twice in a row).
+- `LevelsTest`: categories take turns, Hard's ladder moves up, pictures don't repeat for a long
+  time and categories drop their early pictures.
 - `LevelAssetsTest`: shipped levels match the generator, and the codec round-trips.
 
 ## 9. Open ideas
 
 - Hand-drawn ant sprites instead of the drawn ants.
-- More pictures, or larger ones.
+- More pictures, and more categories for Hard's ladder.
 - Undo, or a single "hint" per level (the solver knows a solution).
 - Release build (minified, not debuggable), which would also make generating on the phone much faster.
