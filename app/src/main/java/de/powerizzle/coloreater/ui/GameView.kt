@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
+import androidx.core.view.ViewCompat
 import de.powerizzle.coloreater.game.Difficulty
 import de.powerizzle.coloreater.game.Level
 import de.powerizzle.coloreater.game.LevelCodec
@@ -221,7 +222,7 @@ class GameView(context: Context) : View(context) {
     }
 
     private fun safeTop(): Float = max(
-        (rootWindowInsets?.displayCutout?.safeInsetTop ?: 0).toFloat(),
+        (ViewCompat.getRootWindowInsets(this)?.displayCutout?.safeInsetTop ?: 0).toFloat(),
         3 * u,
     )
 

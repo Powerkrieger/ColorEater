@@ -50,7 +50,7 @@ then hands you only as many slots as the level really needs (plus the spare ones
 
 Grab `coloreater.apk` from the [latest release](https://github.com/Powerkrieger/ColorEater/releases/latest)
 and open it on your Android phone (you may have to allow installing apps from unknown sources).
-Requires Android 16.
+Requires Android 8.0 or newer.
 
 ## Under the hood
 
