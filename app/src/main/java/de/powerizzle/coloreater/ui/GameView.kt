@@ -473,13 +473,12 @@ class GameView(context: Context) : View(context) {
         }
 
         // Volume queues
-        val canPlace = s.state.freeSlot() >= 0 && s.state.status == Status.PLAYING
         for ((queue, rect) in queueRects.withIndex()) {
             val since = now - s.rejectedAt[queue]
             val shake = if (since < 0.35) (sin(since * 45) * exp(-since * 8) * 2 * u).toFloat() else 0f
             canvas.save()
             canvas.translate(shake, 0f)
-            drawQueue(canvas, s, queue, rect, canPlace)
+            drawQueue(canvas, s, queue, rect)
             canvas.restore()
         }
 
@@ -495,26 +494,26 @@ class GameView(context: Context) : View(context) {
         if (!s.swarm.isIdle || shaking || (s.state.status != Status.PLAYING && !overlay)) postInvalidateOnAnimation()
     }
 
-    private fun drawQueue(canvas: Canvas, s: Session, queue: Int, rect: RectF, canPlace: Boolean) {
+    private fun drawQueue(canvas: Canvas, s: Session, queue: Int, rect: RectF) {
         fill.color = PANEL
         canvas.drawRoundRect(rect, 3 * u, 3 * u, fill)
         val volumes = s.state.queues[queue]
-        val front = min(rect.width() * 0.78f, slotRects.first().width())
-        val rest = front * 0.7f
+        // Volumes keep their true color and get smaller the further back they are, so a long
+        // queue still fits; the smallest ones drop their count.
+        var size = min(rect.width() * 0.78f, slotRects.first().width())
         var y = rect.top + 2.5f * u
         var shown = 0
         for ((i, volume) in volumes.withIndex()) {
-            val size = if (i == 0) front else rest
-            if (y + size > rect.bottom - 7 * u && i < volumes.size - 1) break
-            if (y + size > rect.bottom - 2 * u) break
+            val bottom = if (i < volumes.size - 1) rect.bottom - 7 * u else rect.bottom - 2 * u
+            if (size < 2.5f * u || y + size > bottom) break
             scratch.set(rect.centerX() - size / 2, y, rect.centerX() + size / 2, y + size)
-            val alpha = if (i == 0 && canPlace) 255 else 170
             if (volume.hidden && i > 0) {
                 drawMystery(canvas, scratch)
             } else {
-                drawVolume(canvas, scratch, s.level.palette[volume.color], volume.count, alpha)
+                drawVolume(canvas, scratch, s.level.palette[volume.color], volume.count, 255, label = size >= 7 * u)
             }
-            y += size + (if (i == 0) 2.5f else 1.5f) * u
+            y += size * 1.15f
+            size *= 0.82f
             shown++
         }
         if (shown < volumes.size) {
@@ -524,7 +523,7 @@ class GameView(context: Context) : View(context) {
         }
     }
 
-    private fun drawVolume(canvas: Canvas, rect: RectF, color: Int, count: Int, alpha: Int) {
+    private fun drawVolume(canvas: Canvas, rect: RectF, color: Int, count: Int, alpha: Int, label: Boolean = true) {
         val radius = rect.width() * 0.2f
         fill.color = color
         fill.alpha = alpha
@@ -535,6 +534,7 @@ class GameView(context: Context) : View(context) {
         scratch.set(rect)
         scratch.inset(stroke.strokeWidth / 2, stroke.strokeWidth / 2)
         canvas.drawRoundRect(scratch, radius, radius, stroke)
+        if (!label) return
         text.color = if (Color.luminance(color) > 0.5f) INK else Color.WHITE
         text.alpha = alpha
         text.textSize = rect.height() * 0.42f
