@@ -22,6 +22,16 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    override fun onResume() {
+        super.onResume()
+        gameView.onResume()
+    }
+
+    override fun onPause() {
+        gameView.onPause()
+        super.onPause()
+    }
+
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) hideSystemUi()

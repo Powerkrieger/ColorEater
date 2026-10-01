@@ -9,7 +9,7 @@ import java.io.File
  * The shipped levels in assets must match what the generator produces.
  *
  * After changing the generator or the level curve, regenerate them with
- * `WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'`.
+ * `WRITE_LEVELS=1 ./gradlew testStandardDebugUnitTest --tests '*LevelAssetsTest*'`.
  */
 class LevelAssetsTest {
     private val assets = File("src/main/assets")

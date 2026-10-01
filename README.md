@@ -57,6 +57,11 @@ Grab `coloreater.apk` from the [latest release](https://github.com/Powerkrieger/
 and open it on your Android phone (you may have to allow installing apps from unknown sources).
 Requires Android 8.0 or newer.
 
+`coloreater-kids.apk` is the same game with a daily limit of 30 minutes of play. After that no new
+level can be started until tomorrow, but the one in progress can still be finished, and changing
+the phone's clock doesn't help. Both editions install over each other as an update and keep
+the progress, so you can switch either way.
+
 ## Under the hood
 
 - Kotlin, a single custom `View` drawn with Canvas. No game engine, no image files: even the ants
@@ -67,14 +72,15 @@ Requires Android 8.0 or newer.
 ### Build and run
 
 ```sh
-./gradlew installDebug          # build and install on a connected device
-./gradlew testDebugUnitTest     # rules, generator and level tests
+./gradlew installStandardDebug       # build and install on a connected device
+./gradlew installKidsDebug           # the same with the daily time limit
+./gradlew testStandardDebugUnitTest  # rules, generator and level tests
 ```
 
 After changing the level generator, the level settings or the pictures, regenerate the shipped levels:
 
 ```sh
-WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
+WRITE_LEVELS=1 ./gradlew testStandardDebugUnitTest --tests '*LevelAssetsTest*'
 ```
 
 ### Project layout

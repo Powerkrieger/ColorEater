@@ -39,12 +39,12 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Run unit tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew testStandardDebugUnitTest
 
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > $GITHUB_WORKSPACE/keystore.jks
 
-      - name: Build release APK
+      - name: Build release APKs
         run: ./gradlew assembleRelease
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
@@ -52,18 +52,25 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Rename APK
-        run: cp app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/coloreater.apk
+      # Standard keeps the old file name, so existing download links still work.
+      - name: Rename APKs
+        run: |
+          cp app/build/outputs/apk/standard/release/app-standard-release.apk coloreater.apk
+          cp app/build/outputs/apk/kids/release/app-kids-release.apk coloreater-kids.apk
 
-      - name: Upload APK artifact
+      - name: Upload APK artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ColorEater-${{ github.sha }}
-          path: app/build/outputs/apk/release/coloreater.apk
+          path: |
+            coloreater.apk
+            coloreater-kids.apk
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v3
         with:
-          files: app/build/outputs/apk/release/coloreater.apk
+          files: |
+            coloreater.apk
+            coloreater-kids.apk
           generate_release_notes: true

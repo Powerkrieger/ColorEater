@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.content.edit
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
+import de.powerizzle.coloreater.BuildConfig
 import de.powerizzle.coloreater.game.Difficulty
 import de.powerizzle.coloreater.game.Level
 import de.powerizzle.coloreater.game.LevelCodec
@@ -60,11 +61,26 @@ class GameView(context: Context) : View(context) {
     )
 
     // Levels are generated in the background; the next level is prepared while playing.
+    // The kids edition only allows so much play a day. A game that is already going may always be finished.
+    private val playTime = BuildConfig.DAILY_MINUTES.takeIf { it > 0 }?.let { PlayTime.of(context, it) }
+    private val canStart get() = playTime?.canStart ?: true
+    private var resumed = false
+    private val playTicker = object : Runnable {
+        override fun run() {
+            playTime?.flush()
+            postDelayed(this, PLAY_TICK_MS)
+        }
+    }
+
     private val generator = Executors.newSingleThreadExecutor()
     private val prepared = HashMap<Pair<Difficulty, Int>, Level>()
     private val preparing = HashSet<Pair<Difficulty, Int>>()
 
     private var screen = Screen.TITLE
+        set(value) {
+            field = value
+            trackPlayTime()
+        }
     private var loadingNumber = 0
     private var session: Session? = null
 
@@ -159,6 +175,7 @@ class GameView(context: Context) : View(context) {
     // region Levels
 
     private fun startLevel(number: Int) {
+        if (!mayStart(number)) return
         loadingNumber = number
         val level = prepared.remove(difficulty to number)
         if (level != null) {
@@ -223,13 +240,46 @@ class GameView(context: Context) : View(context) {
         progress.edit { putString(KEY_SAVED + config.difficulty.name, saved) }
     }
 
-    private fun savedPicks(config: LevelConfig): List<Int>? {
-        val parts = progress.getString(KEY_SAVED + config.difficulty.name, null)?.split("|") ?: return null
-        if (parts.size != 3 || parts[0] != versionName || parts[1] != config.number.toString()) return null
+    private fun savedPicks(config: LevelConfig) = savedPicks(config.difficulty, config.number)
+
+    private fun savedPicks(difficulty: Difficulty, number: Int): List<Int>? {
+        val parts = progress.getString(KEY_SAVED + difficulty.name, null)?.split("|") ?: return null
+        if (parts.size != 3 || parts[0] != versionName || parts[1] != number.toString()) return null
         return parts[2].split(",").filter { it.isNotEmpty() }.map { it.toIntOrNull() ?: return null }
     }
 
     private fun forget(difficulty: Difficulty) = progress.edit { remove(KEY_SAVED + difficulty.name) }
+
+    /** Whether level [number] may be played: there is time left today, or it is a game in progress. */
+    private fun mayStart(number: Int, resume: Boolean = true): Boolean {
+        if (canStart || (resume && savedPicks(difficulty, number) != null)) return true
+        AlertDialog.Builder(context)
+            .setTitle("Time's up for today")
+            .setMessage("You've played ${BuildConfig.DAILY_MINUTES} minutes today. The ants are resting until tomorrow.")
+            .setPositiveButton("OK", null)
+            .show()
+        return false
+    }
+
+    fun onResume() {
+        resumed = true
+        trackPlayTime()
+    }
+
+    fun onPause() {
+        resumed = false
+        trackPlayTime()
+    }
+
+    /** Play time runs while a level is on screen. */
+    private fun trackPlayTime() {
+        val playTime = playTime ?: return
+        val playing = resumed && screen == Screen.PLAYING
+        if (playing == playTime.counting) return
+        playTime.counting = playing
+        removeCallbacks(playTicker)
+        if (playing) postDelayed(playTicker, PLAY_TICK_MS)
+    }
 
     /** Locks all levels of [choice] again, after asking. */
     private fun confirmReset(choice: Difficulty) {
@@ -304,7 +354,7 @@ class GameView(context: Context) : View(context) {
             choice.second.set(16 * u, top, width - 16 * u, top + buttonHeight)
         }
         settingsButton.set(width - 13 * u, safeTop(), width - 3 * u, safeTop() + 10 * u)
-        val areaTop = safeTop() + 30 * u
+        val areaTop = safeTop() + if (playTime != null) 36 * u else 30 * u
         val areaBottom = buttonsTop - 6 * u
         val flowerSize = min(width - 12 * u, areaBottom - areaTop)
         val flowerTop = (areaTop + areaBottom - flowerSize) / 2
@@ -417,6 +467,12 @@ class GameView(context: Context) : View(context) {
         }
 
         drawCogIcon(canvas, settingsButton)
+        playTime?.remaining?.let { left ->
+            text.color = if (left > 0) INK_SOFT else ACCENT
+            text.textSize = 4 * u
+            val label = if (left > 0) "${(left + 59_999) / 60_000} min left today" else "Time's up for today"
+            canvas.drawText(label, width / 2f, safeTop() + 32 * u, text)
+        }
 
         text.color = INK_SOFT
         text.textSize = 3.2f * u
@@ -550,7 +606,8 @@ class GameView(context: Context) : View(context) {
         // Top bar
         drawMenuIcon(canvas, menuButton)
         text.textSize = 7 * u
-        drawButton(canvas, restartButton, "↻", PANEL, INK)
+        if (canStart) drawButton(canvas, restartButton, "↻", PANEL, INK)
+        else drawButton(canvas, restartButton, "↻", LOCKED, INK_SOFT)
         text.color = INK
         text.textSize = 5.5f * u
         canvas.drawText("Level ${config.number} · ${config.art.name}", width / 2f, centerTextY(menuButton.centerY()), text)
@@ -689,13 +746,18 @@ class GameView(context: Context) : View(context) {
         canvas.drawText(if (won) "Picture cleared!" else "Stuck!", width / 2f, panel.top + 15 * u, text)
         text.color = INK_SOFT
         text.textSize = 4.2f * u
-        val detail = if (won) "The ants carried away every pixel." else "All slots are full and nothing can be eaten."
+        val detail = when {
+            !canStart -> "That was the last game for today."
+            won -> "The ants carried away every pixel."
+            else -> "All slots are full and nothing can be eaten."
+        }
         canvas.drawText(detail, width / 2f, panel.top + 24 * u, text)
 
         primaryButton.set(panel.left + 6 * u, panel.top + 32 * u, panel.right - 6 * u, panel.top + 44 * u)
         secondaryButton.set(panel.left + 6 * u, panel.top + 47 * u, panel.right - 6 * u, panel.top + 57 * u)
         text.textSize = 5.5f * u
-        drawButton(canvas, primaryButton, if (won) "Next level" else "Try again", ACCENT, Color.WHITE)
+        if (canStart) drawButton(canvas, primaryButton, if (won) "Next level" else "Try again", ACCENT, Color.WHITE)
+        else drawButton(canvas, primaryButton, "Time's up for today", LOCKED, INK_SOFT)
         drawButton(canvas, secondaryButton, "Levels", PANEL, INK)
     }
 
@@ -849,15 +911,17 @@ class GameView(context: Context) : View(context) {
         if (s.settledAt >= 0 && now - s.settledAt > OVERLAY_DELAY) {
             val number = s.level.config.number
             when {
-                primaryButton.contains(x, y) ->
-                    if (s.state.status == Status.WON) startLevel(number + 1) else begin(s.level, resume = false)
+                primaryButton.contains(x, y) -> when {
+                    s.state.status == Status.WON -> startLevel(number + 1)
+                    mayStart(number, resume = false) -> begin(s.level, resume = false)
+                }
                 secondaryButton.contains(x, y) -> showMenu()
             }
             return
         }
         when {
             menuButton.contains(x, y) -> showMenu()
-            restartButton.contains(x, y) -> begin(s.level, resume = false)
+            restartButton.contains(x, y) -> if (mayStart(s.level.config.number, resume = false)) begin(s.level, resume = false)
             else -> {
                 val queue = queueRects.indexOfFirst { it.contains(x, y) }
                 if (queue >= 0 && s.pick(queue, now)) save(s)
@@ -876,6 +940,7 @@ class GameView(context: Context) : View(context) {
         const val KEY_SAVED = "saved_"
         const val LOCKED_SHOWN = 2
         const val OVERLAY_DELAY = 0.5
+        const val PLAY_TICK_MS = 5_000L
 
         const val BACKGROUND = 0xFFF4EDE1.toInt()
         const val PANEL = 0xFFE6D9C3.toInt()

@@ -32,6 +32,24 @@ android {
         }
     }
 
+    // Two editions of the same app: same id and signature, so either installs over the other as an
+    // update and keeps the progress. Only the daily play time differs (0 means unlimited).
+    flavorDimensions += "edition"
+    productFlavors {
+        create("standard") {
+            dimension = "edition"
+            buildConfigField("int", "DAILY_MINUTES", "0")
+        }
+        create("kids") {
+            dimension = "edition"
+            buildConfigField("int", "DAILY_MINUTES", "30")
+        }
+    }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")

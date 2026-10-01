@@ -85,6 +85,16 @@ carries it back.
   restarting drops the save, and so does an app update, since levels may be generated
   differently. The settings screen (the cog on the title screen) can reset the progress of each
   difficulty, which locks its levels again.
+- **Daily play time** (kids edition only, the `kids` build flavor): 30 minutes a day of time on
+  the board (`PlayTime`). Once it is used up, no
+  new game can be started (new level, next level, restart, try again), but a game in progress can
+  be finished. Time played is measured with the uptime clock, which can't be set. Which day it is
+  comes from network time when the system has it (Android 13+), otherwise from the wall clock read
+  once per boot and carried forward with the uptime clock, so changing the clock while the phone
+  is on does nothing. The day never goes backward, so setting the clock back or changing the time
+  zone never returns a day already played. What remains: without network time, setting the clock
+  forward and rebooting starts a new day early; and clearing the app's data resets it (along
+  with all level progress). `PlayTimeTest` covers the clock tricks.
 - **Drawing**: the ant is top-down, with three body parts, six legs in an alternating tripod gait
   and antennae. Paths bend slightly (out on one side, back on the other). No image files are needed.
 
@@ -229,7 +239,7 @@ level is being played.
 After changing the generator or `Levels.config`, regenerate them:
 
 ```sh
-WRITE_LEVELS=1 ./gradlew testDebugUnitTest --tests '*LevelAssetsTest*'
+WRITE_LEVELS=1 ./gradlew testStandardDebugUnitTest --tests '*LevelAssetsTest*'
 ```
 
 `LevelAssetsTest` fails if the files no longer match the generator.
