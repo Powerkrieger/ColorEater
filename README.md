@@ -59,8 +59,9 @@ Requires Android 8.0 or newer.
 
 `coloreater-kids.apk` is the same game with a daily limit of 30 minutes of play. After that no new
 level can be started until tomorrow, but the one in progress can still be finished, and changing
-the phone's clock doesn't help. Both editions install over each other as an update and keep
-the progress, so you can switch either way.
+the phone's clock doesn't help. Since 0.7.0 it is a separate app ("Color Eater Kids",
+`de.powerizzle.coloreater.kids`) that can be installed next to the normal edition; each keeps its
+own progress. Kids installs from before 0.7.0 update to the normal edition, so reinstall them once.
 
 ## Under the hood
 

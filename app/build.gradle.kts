@@ -14,8 +14,8 @@ android {
         applicationId = "de.powerizzle.coloreater"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.6.0"
+        versionCode = 9
+        versionName = "0.7.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -32,8 +32,8 @@ android {
         }
     }
 
-    // Two editions of the same app: same id and signature, so either installs over the other as an
-    // update and keeps the progress. Only the daily play time differs (0 means unlimited).
+    // Two editions: the kids edition has its own id (".kids"), so both can be installed side by side
+    // and listed separately in F-Droid. Only the daily play time differs (0 means unlimited).
     flavorDimensions += "edition"
     productFlavors {
         create("standard") {
@@ -42,6 +42,7 @@ android {
         }
         create("kids") {
             dimension = "edition"
+            applicationIdSuffix = ".kids"
             buildConfigField("int", "DAILY_MINUTES", "30")
         }
     }
