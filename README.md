@@ -107,3 +107,7 @@ copies can't be updated.
 ---
 
 <p align="center"><sub>Created with AI.</sub></p>
+
+## License
+
+MIT, see [LICENSE](LICENSE).
