@@ -63,7 +63,9 @@ class GameView(context: Context) : View(context) {
     // Levels are generated in the background; the next level is prepared while playing.
     // The kids edition only allows so much play a day. A game that is already going may always be finished.
     private val playTime = BuildConfig.DAILY_MINUTES.takeIf { it > 0 }?.let { PlayTime.of(context, it) }
-    private val canStart get() = playTime?.canStart ?: true
+    // A wait after each won level that spaces out play; configured per edition, 0 means no wait.
+    private val cooldown = BuildConfig.COOLDOWN_MINUTES.takeIf { it > 0 }?.let { Cooldown.of(context, it) }
+    private val canStart get() = (playTime?.canStart ?: true) && cooldown?.active != true
     private var resumed = false
     private val playTicker = object : Runnable {
         override fun run() {
@@ -71,6 +73,8 @@ class GameView(context: Context) : View(context) {
             postDelayed(this, PLAY_TICK_MS)
         }
     }
+    // Keeps the wait's countdown on the result overlay ticking about once a second.
+    private val cooldownTick = Runnable { invalidate() }
 
     private val generator = Executors.newSingleThreadExecutor()
     private val prepared = HashMap<Pair<Difficulty, Int>, Level>()
@@ -79,10 +83,14 @@ class GameView(context: Context) : View(context) {
     private var screen = Screen.TITLE
         set(value) {
             field = value
+            if (value != Screen.PLAYING) removeCallbacks(cooldownTick)
             trackPlayTime()
         }
     private var loadingNumber = 0
     private var session: Session? = null
+
+    // Set once the current level's win has been handled, so the unlock and wait happen only once.
+    private var rewarded = false
 
     // The level list scrolls vertically; taps there only count if the finger didn't drag.
     private var menuScroll = 0f
@@ -220,6 +228,7 @@ class GameView(context: Context) : View(context) {
         session = Session(level).apply {
             if (resume) savedPicks(level.config)?.let(::restore) else forget(level.config.difficulty)
         }
+        rewarded = false
         screen = Screen.PLAYING
         layoutBoard()
         prepare(level.config.number + 1)
@@ -252,13 +261,48 @@ class GameView(context: Context) : View(context) {
 
     /** Whether level [number] may be played: there is time left today, or it is a game in progress. */
     private fun mayStart(number: Int, resume: Boolean = true): Boolean {
-        if (canStart || (resume && savedPicks(difficulty, number) != null)) return true
-        AlertDialog.Builder(context)
-            .setTitle("Time's up for today")
-            .setMessage("You've played ${BuildConfig.DAILY_MINUTES} minutes today. The ants are resting until tomorrow.")
-            .setPositiveButton("OK", null)
-            .show()
-        return false
+        // A game already in progress may always be finished.
+        if (resume && savedPicks(difficulty, number) != null) return true
+        val waiting = cooldown?.remaining ?: 0
+        if (waiting > 0) {
+            val minutes = (waiting + 59_999) / 60_000
+            AlertDialog.Builder(context)
+                .setTitle("The ants need a rest")
+                .setMessage(
+                    "Come back in ${if (minutes == 1L) "about a minute" else "about $minutes minutes"} " +
+                        "to start the next picture.",
+                )
+                .setPositiveButton("OK", null)
+                .show()
+            return false
+        }
+        if (playTime?.canStart == false) {
+            AlertDialog.Builder(context)
+                .setTitle("Time's up for today")
+                .setMessage("You've played ${budgetLabel(BuildConfig.DAILY_MINUTES)} today. The ants are resting until tomorrow.")
+                .setPositiveButton("OK", null)
+                .show()
+            return false
+        }
+        return true
+    }
+
+    /** The daily budget as friendly words, e.g. "2 hours", "an hour", "30 minutes", "1 hour 30 minutes". */
+    private fun budgetLabel(minutes: Int): String {
+        val hours = minutes / 60
+        val mins = minutes % 60
+        val hourPart = when (hours) {
+            0 -> null
+            1 -> "an hour"
+            else -> "$hours hours"
+        }
+        val minPart = if (mins == 0) null else "$mins minutes"
+        return when {
+            hourPart != null && minPart != null -> "${hours}h ${mins}min"
+            hourPart != null -> hourPart
+            minPart != null -> minPart
+            else -> "no time"
+        }
     }
 
     fun onResume() {
@@ -268,6 +312,7 @@ class GameView(context: Context) : View(context) {
 
     fun onPause() {
         resumed = false
+        removeCallbacks(cooldownTick)
         trackPlayTime()
     }
 
@@ -670,12 +715,21 @@ class GameView(context: Context) : View(context) {
         s.swarm.draw(canvas, now, antLength, cell.coerceIn(1.2f * u, 2.6f * u), s.level.palette)
 
         val settled = s.settledAt >= 0
-        if (settled && s.state.status == Status.WON && unlocked <= config.number) unlocked = config.number + 1
+        if (settled && s.state.status == Status.WON && !rewarded) {
+            rewarded = true
+            if (unlocked <= config.number) unlocked = config.number + 1
+            cooldown?.start()
+        }
         val overlay = settled && now - s.settledAt > OVERLAY_DELAY
         if (overlay) drawResult(canvas, s)
 
         val shaking = s.rejectedAt.any { now - it < 0.35 }
         if (!s.swarm.isIdle || shaking || (s.state.status != Status.PLAYING && !overlay)) postInvalidateOnAnimation()
+        // The result overlay shows a live countdown, so refresh it about once a second while waiting.
+        if (overlay && cooldown?.active == true) {
+            removeCallbacks(cooldownTick)
+            postDelayed(cooldownTick, 1_000L)
+        }
     }
 
     private fun drawQueue(canvas: Canvas, s: Session, queue: Int, rect: RectF) {
@@ -746,8 +800,10 @@ class GameView(context: Context) : View(context) {
         canvas.drawText(if (won) "Picture cleared!" else "Stuck!", width / 2f, panel.top + 15 * u, text)
         text.color = INK_SOFT
         text.textSize = 4.2f * u
+        val waiting = cooldown?.remaining ?: 0
         val detail = when {
-            !canStart -> "That was the last game for today."
+            waiting > 0 -> "The ants need a rest before the next picture."
+            playTime?.canStart == false -> "That was the last game for today."
             won -> "The ants carried away every pixel."
             else -> "All slots are full and nothing can be eaten."
         }
@@ -756,8 +812,14 @@ class GameView(context: Context) : View(context) {
         primaryButton.set(panel.left + 6 * u, panel.top + 32 * u, panel.right - 6 * u, panel.top + 44 * u)
         secondaryButton.set(panel.left + 6 * u, panel.top + 47 * u, panel.right - 6 * u, panel.top + 57 * u)
         text.textSize = 5.5f * u
-        if (canStart) drawButton(canvas, primaryButton, if (won) "Next level" else "Try again", ACCENT, Color.WHITE)
-        else drawButton(canvas, primaryButton, "Time's up for today", LOCKED, INK_SOFT)
+        when {
+            waiting > 0 -> {
+                val secs = (waiting + 999) / 1000
+                drawButton(canvas, primaryButton, "Resting %d:%02d".format(secs / 60, secs % 60), LOCKED, INK_SOFT)
+            }
+            !canStart -> drawButton(canvas, primaryButton, "Time's up for today", LOCKED, INK_SOFT)
+            else -> drawButton(canvas, primaryButton, if (won) "Next level" else "Try again", ACCENT, Color.WHITE)
+        }
         drawButton(canvas, secondaryButton, "Levels", PANEL, INK)
     }
 

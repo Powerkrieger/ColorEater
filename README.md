@@ -57,9 +57,10 @@ Grab `coloreater.apk` from the [latest release](https://github.com/Powerkrieger/
 and open it on your Android phone (you may have to allow installing apps from unknown sources).
 Requires Android 8.0 or newer.
 
-`coloreater-kids.apk` is the same game with a daily limit of 30 minutes of play. After that no new
-level can be started until tomorrow, but the one in progress can still be finished, and changing
-the phone's clock doesn't help. Since 0.7.0 it is a separate app ("Color Eater Kids",
+`coloreater-kids.apk` is the same game with a daily limit of 2 hours of play, plus a 10-minute rest
+after each level. After the daily limit no new level can be started until tomorrow, and during a rest
+no new level can be started until it passes; either way the one in progress can still be finished, and
+changing the phone's clock doesn't help. Since 0.7.0 it is a separate app ("Color Eater Kids",
 `de.powerizzle.coloreater.kids`) that can be installed next to the normal edition; each keeps its
 own progress. Kids installs from before 0.7.0 update to the normal edition, so reinstall them once.
 
